@@ -63,6 +63,11 @@ First implementation target features:
     - Consider button debouncing and synchronization to avoid metastability
     - Need to consider physical routing issues on FPGA — use BUFG or ODDR?
     - How to account for delay introduced from pipelining?
+ 
+
+## Useful Links
+https://projectf.io/
 - Do we want to do 3x3 or 4x4 multiplication? 
     - 4x4 would allow us to have an extra “homogeneous” dimension to translate the cube rather than just rotate it
     - Looks like this is good because it unifies rotation and translation into a single transformation matrix
+
