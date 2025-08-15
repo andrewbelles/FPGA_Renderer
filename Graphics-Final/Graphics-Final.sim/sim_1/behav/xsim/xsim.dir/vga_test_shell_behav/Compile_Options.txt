@@ -1,0 +1,1 @@
+--incr --debug "typical" --relax --mt "2" -L "xil_defaultlib" -L "secureip" --snapshot "vga_test_shell_behav" "xil_defaultlib.vga_test_shell" -log "elaborate.log" 
