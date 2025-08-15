@@ -31,8 +31,8 @@ port map(
   A => A_sample, 
   B => B_sample, 
   A_dec_count => A_dec_count_sample,
-  B_dec_count => B_dec_count_sample);
-
+  B_dec_count => B_dec_count_sample,
+  AB => AB_sample);
 clock_proc: process 
 begin
   clk_port <= not(clk_port);
@@ -41,7 +41,12 @@ end process clock_proc;
 
 stim_proc: process 
 begin 
-
+  A_sample <= "0000000010010100";
+  A_dec_count_sample <= "0101";
+  B_sample <= "0000000010000001";
+  B_dec_count_sample <= "0011";
+  load_sample <= '1'; 
+  wait;
 end process stim_proc; 
 
 end;
