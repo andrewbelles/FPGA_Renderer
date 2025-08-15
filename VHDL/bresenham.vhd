@@ -1,0 +1,131 @@
+----------------------------------------------------------------------------------
+-- Company: Dartmouth Engineering
+-- Engineer: Ben Sheppard and Andy Belles
+-- 
+-- Create Date: 08/15/2025 11:24:55 AM
+-- Module Name: bresenham - Behavioral
+-- Project Name: 
+-- Tool Versions: 
+-- Description: 
+-- 
+-- 
+
+----------------------------------------------------------------------------------
+
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+use IEEE.NUMERIC_STD.ALL;
+
+entity bresenham is
+Port (clk, reset        :   in std_logic;
+      start             :   in std_logic;
+      x0, y0, x1, y1    :   in std_logic_vector(10 downto 0);
+      plot              :   out std_logic;    
+      x, y              :   out std_logic_vector(10 downto 0);
+      done              :   out std_logic);
+end bresenham;
+
+architecture Behavioral of bresenham is
+-- signal declarations
+
+-- know that x0, y0, ... are all positve so pad with leading 0; then cast to signed for arithmetic
+--variable x0_sg : signed(11 downto 0) := signed('0' & x0);
+--variable x1_sg : signed(11 downto 0) := signed('0' & x1);
+---variable y0_sg : signed(11 downto 0) := signed('0' & y0);
+--variable y1_sg : signed(11 downto 0) := signed('0' & y1);
+
+-- signals for registers
+signal err : signed(11 downto 0); -- 11 bit so that it has range of -2048 to signal
+signal x_sg : signed(11 downto 0);
+signal y_sg : signed(11 downto 0);
+
+type state is (IDLE, RUN);
+signal current_state, next_state : state := IDLE;
+
+begin
+
+process(clk)
+variable dx, dy, err, e2 : signed(11 downto 0);
+variable right, down     : std_logic;
+variable x0_var : signed(11 downto 0);
+variable x1_var : signed(11 downto 0);
+variable y0_var : signed(11 downto 0);
+variable y1_var : signed(11 downto 0);
+begin
+    if(rising_edge(clk)) then
+        done <= '0';
+        plot <= '0';
+        if(reset = '1') then
+            current_state <= IDLE;
+        else
+            case (current_state) is
+                when IDLE =>
+                    if(start = '1') then
+                        x0_var := signed('0' & x0); 
+                        y0_var := signed('0' & y0); 
+                        x1_var := signed('0' & x1); 
+                        y1_var := signed('0' & y1); 
+                        
+                        dx := x1_var - x0_var;
+                        if(dx >= 0) then right := '1'; else right := '0'; end if;
+                        if(right /= '1') then dx := -dx; end if;
+                        
+                        dy := y1_var - y0_var;
+                        if(dy >= 0) then down := '1'; else down := '0'; end if;
+                        if(down = '1') then dy := -dy; end if;
+                        
+                        err := dx + dy;
+                        x_sg <= signed('0' & x0);
+                        y_sg <= signed('0' & y0);
+                        
+                        plot <= '1';
+                        current_state <= RUN;
+                    end if;
+                when RUN => 
+                    if(x_sg = x1_var and y_sg = y1_var) then
+                        done <= '1';
+                        current_state <= IDLE;
+                    else
+                        plot <= '1';
+                        e2 := err sll 1; -- shift left, preserves sign
+                        if(e2 > dy) then
+                            err := err + dy;
+                            if(right = '1') then
+                                x_sg <= x_sg + 1;
+                            else
+                                x_sg <= x_sg - 1;
+                            end if;
+                        end if;
+                        if(e2 < dx) then
+                            err := err + dx;
+                            if(down = '1') then
+                                y_sg <= y_sg + 1;
+                            else
+                                y_sg <= y_sg - 1;
+                            end if;
+                        end if;
+                    end if;
+                when others =>
+                    current_state <= IDLE;
+            end case;
+        end if;
+    end if;
+end process;
+
+x <= std_logic_vector(x_sg(10 downto 0));
+y <= std_logic_vector(y_sg(10 downto 0));
+
+
+
+-- state update
+--state_update : process(clk) 
+--begin
+--    if(rising_edge(clk)) then
+--        current_state <= next_state;
+--    end if;
+--end process state_update;
+
+
+end Behavioral;
