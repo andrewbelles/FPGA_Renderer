@@ -1,7 +1,0 @@
-# compile vhdl design source files
-vhdl xil_defaultlib  \
-"../../../../../VHDL/vga_controller.vhd" \
-"../../../../../VHDL/vga_testbench.vhd" \
-
-# Do not sort compile order
-nosort
