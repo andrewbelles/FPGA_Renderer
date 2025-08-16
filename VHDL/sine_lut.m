@@ -1,0 +1,25 @@
+%
+% Generates sine values for the specified N to be used in a LUT 
+%
+
+N = 256; 
+k = 0:N-1; 
+theta = k * (pi/2) / N; 
+
+% 14 binary digits of decimal precision 
+scale = 2^14; 
+% Generates lut array 
+lut = round(sin(theta) * scale); 
+
+% Convert to 2's complement uint16 to write out as HEX 
+lut_uint16 = uint16(mod(int32(lut), 2^16));
+
+% Write to file Xilinx expects for LUT 
+fid = fopen('sin_d14_lut.coe', 'w');
+fprintf(fid, 'memory_initialization_radix=16;\n');
+fprintf(fid, 'memory_initialization_vector=\n');
+for i = 1:numel(lut_uint16)-1
+    fprintf(fid, '%04X,\n', lut_uint16(i));
+end
+fprintf(fid, '%04X;\n', lut_uint16(end));
+fclose(fid);
