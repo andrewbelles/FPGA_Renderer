@@ -5,17 +5,16 @@ use IEEE.numeric_std.all;;
 entity sine_lut is 
   port (
     clk_port   : in std_logic; 
-    reset_port : in std_logic; 
-    frequency  : in std_logic_vector(7 downto 0); 
+    addr       : in std_logic_vector(15 downto 0); 
     sine_out   : out std_logic_vector(15 downto 0)); -- 2.14 fixed point 
 end entity sine_lut; 
 
 architecture behavioral of sine_lut is 
   -- 256 entries of 16 bit , 14 dec precision signed fixed point sine values 
-  type sine_lut_type is array (0 to 255) of std_logic_vector(15 downto 0);
+  type rom_256x16_t is array (0 to 255) of std_logic_vector(15 downto 0);
 
   -- generate table from regfile decleration 
-  constant table : sine_lut_type := (
+  constant table : rom_256x16_t := (
     x"0000", x"0065", x"00C9", x"012E",
     x"0065", x"00C9", x"012E", x"0192",
     x"00C9", x"012E", x"0192", x"01F7",
@@ -80,24 +79,8 @@ architecture behavioral of sine_lut is
     x"1766", x"17C4", x"1821", x"187E",
     x"17C4", x"1821", x"187E", x"18DB",
     x"1821", x"187E", x"18DB", x"1937"); 
-
-    -- phase accumulator that indexes based on
-    signal phase : unsigned(15 downto 0);
-    signal addr  : integer; 
 begin 
 
-addr_table: process( clk_port )
-begin
-  if rising_edge( clk_port ) then 
-    if reset_port = '1' then 
-      phase <= (others => '0');  
-    else 
-      phase <= phase + unsigned(x"00" & frequency); 
-    end if;
-  end if; 
-end process addr_table; 
-
-addr <= to_integer( phase(15 downto 8))
 sine_out <= table(addr);
 
 end architecture behavioral; 
