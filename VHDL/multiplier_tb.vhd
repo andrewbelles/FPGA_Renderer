@@ -40,13 +40,40 @@ begin
 end process clock_proc;
 
 stim_proc: process 
-begin 
-  A_sample <= "0000000010010100";
-  A_dec_count_sample <= "0101";
-  B_sample <= "0000000010000001";
-  B_dec_count_sample <= "0011";
+begin  
+  -- 10.5 x 12.3 -> 7.8
+  -- A  := 4.625
+  -- B  := 16.125 
+  -- AB := 74.57812500 : 0x4a94 
+  A_sample <= x"0094";
+  A_dec_count_sample <= x"5";
+  B_sample <= x"0081";
+  B_dec_count_sample <= x"3";
   load_sample <= '1'; 
-  wait;
+  wait for 3*clk_period;
+
+  -- (-)2.14 x 7.8 -> (-)7.8
+  -- A  := -0.70710678118655
+  -- B  := 43.78125
+  -- AB := -30.95801876 : 0xe10b
+  A_sample <= x"d2bf";
+  A_dec_count_sample <= x"E";
+  B_sample <= x"2bc8";
+  B_dec_count_sample <= x"8";
+  load_sample <= '1'; 
+  wait for 3*clk_period;
+
+  -- 7.8 x (-)7.8 -> (-)7.8
+  -- A  := 18.421875 
+  -- B  := -4.12475191
+  -- AB := -75.98566409 : 0xb404
+  A_sample <= x"126c";
+  A_dec_count_sample <= x"8";
+  B_sample <= x"fbe0";
+  B_dec_count_sample <= x"8";
+  load_sample <= '1'; 
+  wait for 3*clk_period;
+
 end process stim_proc; 
 
 end;
