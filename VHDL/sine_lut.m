@@ -15,11 +15,12 @@ lut = round(sin(theta) * scale);
 lut_uint16 = uint16(mod(int32(lut), 2^16));
 
 % Write to file Xilinx expects for LUT 
-fid = fopen('sin_d14_lut.coe', 'w');
-fprintf(fid, 'memory_initialization_radix=16;\n');
-fprintf(fid, 'memory_initialization_vector=\n');
-for i = 1:numel(lut_uint16)-1
-    fprintf(fid, '%04X,\n', lut_uint16(i));
+fid = fopen('sin_d14_lut.hex', 'w');
+for i = 1:(N/4)
+    fprintf(fid, '%04X, %04X, %04X, %04X\n', ...
+        lut_uint16(i), ...
+        lut_uint16(i + 1), ...
+        lut_uint16(i + 2), ...
+        lut_uint16(i + 3));
 end
-fprintf(fid, '%04X;\n', lut_uint16(end));
 fclose(fid);
