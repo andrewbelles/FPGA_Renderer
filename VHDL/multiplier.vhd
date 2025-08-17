@@ -2,19 +2,19 @@ library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all; 
 
-entity multiplier_16b16 is 
+entity multiplier_16x16 is 
 port (
-  clk_port     : in std_logic;
-  load_port    : in std_logic;  
-  reset_port   : in std_logic; 
-  A, B         : in std_logic_vector(15 downto 0);
-  A_dec_count  : in std_logic_vector(3 downto 0);
-  B_dec_count  : in std_logic_vector(3 downto 0); 
-  AB           : out std_logic_vector(15 downto 0);
-  AB_dec_count : out std_logic_vector(3 downto 0)); 
-end multiplier_16b16; 
+  clk_port   : in std_logic;
+  load_port  : in std_logic;  
+  reset_port : in std_logic; 
+  A, B       : in std_logic_vector(15 downto 0);
+  A_dig      : in std_logic_vector(3 downto 0);
+  B_dig      : in std_logic_vector(3 downto 0); 
+  AB         : out std_logic_vector(15 downto 0);
+  AB_dig     : out std_logic_vector(3 downto 0)); 
+end multiplier_16x16; 
 
-architecture behavioral of multiplier_16b16 is 
+architecture behavioral of multiplier_16x16 is 
   -- type declarations 
   type accumul_array is array (0 to 3) of unsigned(31 downto 0); 
   type shift_array is array (0 to 15) of unsigned(31 downto 0);
@@ -81,7 +81,7 @@ begin
         AB <= std_logic_vector(-signed(S(15 downto 0)) );
       end if; 
       -- 5 bits - value 8 guarentees value is 4 bits or less 
-      AB_dec_count <= std_logic_vector((shift_count(3 downto 0)));
+      AB_dig <= std_logic_vector((shift_count(3 downto 0)));
     when others => 
       null;
   end case; 
@@ -135,11 +135,11 @@ begin
       end if;  
 
       -- if number of decimals is less than 8 then we shouldn't shift
-      if (('0' & unsigned(A_dec_count)) + ('0' & unsigned(B_dec_count))) < 8 then
+      if (('0' & unsigned(A_dig)) + ('0' & unsigned(B_dig))) < 8 then
         shift_count <= (others => '0');
       else 
-        shift_count <= (('0' & unsigned(A_dec_count)) +
-                        ('0' & unsigned(B_dec_count))) - 8;
+        shift_count <= (('0' & unsigned(A_dig)) +
+                        ('0' & unsigned(B_dig))) - 8;
       end if;
     end if; 
   end if; 

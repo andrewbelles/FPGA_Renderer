@@ -7,7 +7,7 @@ entity sine_lut is
     clk_port   : in std_logic; 
     cos_en     : in std_logic;  
     rads       : in std_logic_vector(15 downto 0); 
-    sine_out   : out std_logic_vector(15 downto 0)); -- 2.14 fixed point 
+    sine   : out std_logic_vector(15 downto 0)); -- 2.14 fixed point 
 end entity sine_lut; 
 
 architecture behavioral of sine_lut is 
@@ -546,7 +546,7 @@ idx <= to_integer( bin(15 downto 5));
 
 set_sine: process( idx ) 
 begin 
-  sine_out <= sine_table(idx);    
+  sine <= sine_table(idx);    
 end process set_sine; 
 
 end architecture behavioral; 
