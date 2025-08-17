@@ -2,7 +2,7 @@
 % Generates sine values for the specified N to be used in a LUT 
 %
 
-N = 4096;
+N = 2048;
 k = 0:N-1;
 theta = 2*pi*k/N;
 
