@@ -5,7 +5,8 @@ use IEEE.numeric_std.all;
 entity sine_lut is 
   port (
     clk_port   : in std_logic; 
-    addr       : in std_logic_vector(15 downto 0); 
+    cos_en     : in std_logic;  
+    rads       : in std_logic_vector(15 downto 0); 
     sine_out   : out std_logic_vector(15 downto 0)); -- 2.14 fixed point 
 end entity sine_lut; 
 
@@ -535,9 +536,11 @@ signal idx : integer  := 1;
 
 begin
 
-angle <= signed(addr);
+angle <= signed(rads);
 phase <= (angle + (shift_right(angle, 2) + shift_right(angle, 5) - shift_right(angle, 7)));
-turns <= unsigned(phase); 
+-- handle cosine internally as flag 
+turns <= unsigned(phase) when cos_en = '1' 
+         unsigned(phase) + to_unsigned(x"4000",16) when others; 
 bin <= turns + to_unsigned(16, 16); 
 idx <= to_integer( bin(15 downto 5));    
 
