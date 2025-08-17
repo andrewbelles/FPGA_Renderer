@@ -14,17 +14,16 @@ architecture testbench of sine_lut_tb is
   end component; 
 
 signal clk_port : std_logic := '0'; 
-signal addr     : std_logic_vector := (others => '0');
-signal sine_out : std_logic_vector := (others => '0');
+signal addr     : std_logic_vector(15 downto 0) := (others => '0');
+signal sine_out : std_logic_vector(15 downto 0) := (others => '0');
 
 constant clk_period : time := 10 ns; 
 
-begin; 
-
+begin 
 uut: sine_lut 
 port map(
   clk_port => clk_port, 
-  addr => addr; 
+  addr => addr, 
   sine_out => sine_out);
 
 clock_stim: process
