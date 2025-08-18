@@ -11,7 +11,8 @@ port (
   A_dig      : in std_logic_vector(3 downto 0);
   B_dig      : in std_logic_vector(3 downto 0); 
   AB         : out std_logic_vector(15 downto 0);
-  AB_dig     : out std_logic_vector(3 downto 0)); 
+  AB_dig     : out std_logic_vector(3 downto 0);
+  set_port   : out std_logic); 
 end multiplier_16x16; 
 
 architecture behavioral of multiplier_16x16 is 
@@ -61,7 +62,8 @@ begin
       when third => 
         next_state <= done; 
       when done => 
-        next_state <= idle; 
+        -- stay static in done state, must assert reset to return
+        next_state <= done;     
     end case; 
   end if;
 end process next_state_logic; 
@@ -70,10 +72,12 @@ output_logic: process ( current_state, partials, negative_flag, shift_count )
   variable S : unsigned(31 downto 0) := (others => '0');
 begin
   reset <= '0';
+  set_port <= '0';
   case ( current_state) is 
     when idle => 
       reset <= '1'; 
     when done => 
+      set_port <= '1';
       S := partials(0);
       if negative_flag = '0' then 
         AB <= std_logic_vector( signed(S(15 downto 0)) );

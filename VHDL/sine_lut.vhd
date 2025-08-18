@@ -1,6 +1,7 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
+use work.array_types.all;
 
 entity sine_lut is 
   port (
@@ -12,11 +13,8 @@ entity sine_lut is
 end entity sine_lut; 
 
 architecture behavioral of sine_lut is 
-  -- 2048 entries of 16 bit , 14 dec precision signed fixed point sine values 
-  type rom_2048x16_t is array (0 to 2047) of std_logic_vector(15 downto 0);
-
   -- generate table from regfile decleration 
-  constant sine_table : rom_2048x16_t := (
+  constant sine_table : array_2048x16_t := (
     x"0000", x"0032", x"0065", x"0097",
     x"00C9", x"00FB", x"012E", x"0160",
     x"0192", x"01C4", x"01F7", x"0229",
