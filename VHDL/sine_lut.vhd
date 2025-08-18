@@ -4,16 +4,16 @@ use IEEE.numeric_std.all;
 
 entity sine_lut is 
   port (
-    clk_port   : in std_logic; 
-    cos_en     : in std_logic;  
-    rads       : in std_logic_vector(15 downto 0); 
-    sine   : out std_logic_vector(15 downto 0)); -- 2.14 fixed point 
+    clk_port : in std_logic; 
+    cos_en   : in std_logic;  
+    rads     : in std_logic_vector(15 downto 0); 
+    sine     : out std_logic_vector(15 downto 0);
+    set_port : out std_logic); -- 2.14 fixed point 
 end entity sine_lut; 
 
 architecture behavioral of sine_lut is 
   -- 2048 entries of 16 bit , 14 dec precision signed fixed point sine values 
   type rom_2048x16_t is array (0 to 2047) of std_logic_vector(15 downto 0);
-  signal addr_uint : unsigned(15 downto 0) := (others => '0'); 
 
   -- generate table from regfile decleration 
   constant sine_table : rom_2048x16_t := (
@@ -530,23 +530,28 @@ architecture behavioral of sine_lut is
     x"FE6E", x"FEA0", x"FED2", x"FF05",
     x"FF37", x"FF69", x"FF9B", x"FFCE");
 
-signal angle, phase : signed(15 downto 0) := (others => '0');
+signal angle, phase : signed(15 downto 0)   := (others => '0');
 signal turns, bin   : unsigned(15 downto 0) := (others => '0');
-signal idx : integer  := 1; 
+signal idx          : integer := 1; 
 
 begin
 
 angle <= signed(rads);
 phase <= (angle + (shift_right(angle, 2) + shift_right(angle, 5) - shift_right(angle, 7)));
--- handle cosine internally as flag 
-turns <= unsigned(phase) when cos_en = '1' 
-         unsigned(phase) + to_unsigned(x"4000",16) when others; 
-bin <= turns + to_unsigned(16, 16); 
-idx <= to_integer( bin(15 downto 5));    
 
-set_sine: process( idx ) 
+-- handle cosine internally by adding turns to phase (specific to 2048 value table)  
+turns <=  unsigned(phase)          when cos_en = '1' else  
+         (unsigned(phase) + 16384) when cos_en = '0'; 
+bin   <= turns + 16; 
+idx   <= to_integer( bin(15 downto 5));    
+
+-- set read value on ff and assert that value can be read
+set_sine: process( clk_port ) 
 begin 
-  sine <= sine_table(idx);    
+  if rising_edge( clk_port ) then
+    set_port <= '1';
+    sine     <= sine_table(idx);    
+  end if; 
 end process set_sine; 
 
 end architecture behavioral; 
