@@ -101,7 +101,6 @@ get_operands: set_operands_m16x16
     operands => operands, 
     set_port => operand_set); 
 
-
 -- TODO: Write without variable? 
 -- sensitive to sine and cosine
 invert_sine: process( sine )

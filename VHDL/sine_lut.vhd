@@ -535,7 +535,7 @@ signal idx          : integer := 1;
 begin
 
 angle <= signed(rads);
-phase <= (angle + (shift_right(angle, 2) + shift_right(angle, 5) - shift_right(angle, 7)));
+phase <= shift_left((angle + (shift_right(angle, 2) + shift_right(angle, 5) - shift_right(angle, 7))), 1);
 
 -- handle cosine internally by adding turns to phase (specific to 2048 value table)  
 turns <=  unsigned(phase)          when cos_en = '1' else  
