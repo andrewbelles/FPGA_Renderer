@@ -31,8 +31,8 @@ port map(
   load_port => load_sample,
   A => A_sample, 
   B => B_sample, 
-  A_dig => A_dec_count_sample,
-  B_dig => B_dec_count_sample,
+  A_dig => A_dig_sample,
+  B_dig => B_dig_sample,
   AB => AB_sample);
 clock_proc: process 
 begin

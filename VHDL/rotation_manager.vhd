@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity matmul_shell is 
+entity matmul_manager is 
 port( 
   clk_port   : in std_logic; 
   angle      : in std_logic_vector(15 downto 0);
@@ -11,9 +11,9 @@ port(
   x, y, z    : in std_logic_vector(15 downto 0); 
   nx, ny, nz : out std_logic_vector(15 downto 0);
   set_port   : out std_logic);
-end matmul_shell; 
+end matmul_manager; 
 
-architecture behavioral of matmul_shell is 
+architecture behavioral of matmul_manager is 
 ----------------------- component declarations ---------------------------
 component sine_lut 
   port (
