@@ -19,7 +19,7 @@ architecture behavioral of multiplier_16x16 is
   -- type declarations 
   type accumul_array is array (0 to 3) of unsigned(31 downto 0); 
   type shift_array is array (0 to 15) of unsigned(31 downto 0);
-  type state_type is ( idle, first, second, third, done );
+  type state_type is ( idle, load, first, second, third, done );
 
   -- for accumulator
   -- structure signals 
@@ -27,10 +27,11 @@ architecture behavioral of multiplier_16x16 is
   signal mag32_shifts  : shift_array := (others => (others => '0'));
 
   -- base type signals 
-  signal shift_count   : unsigned(4 downto 0) := (others => '0'); 
-  signal A_mag32    : unsigned(31 downto 0) := (others => '0');    
-  signal B_mag16       : unsigned(15 downto 0) := (others => '0');
-  signal negative_flag, reset : std_logic := '0';
+  signal shift_count       : unsigned(4 downto 0) := (others => '0'); 
+  signal A_mag32           : unsigned(31 downto 0) := (others => '0');    
+  signal B_mag16           : unsigned(15 downto 0) := (others => '0');
+  signal negative_flag     : std_logic := '0';
+  signal load_en, reset_en : std_logic := '0';
   -- for fsm 
   signal current_state, next_state : state_type := idle; 
 begin 
@@ -53,8 +54,10 @@ begin
       when idle =>
         next_state <= idle; 
         if load_port = '1' then 
-          next_state <= first; 
+          next_state <= load; 
         end if; 
+      when load => 
+        next_state <= first; 
       when first =>
         next_state <= second; 
       when second =>  
@@ -71,11 +74,14 @@ end process next_state_logic;
 output_logic: process ( current_state, partials, negative_flag, shift_count )
   variable S : unsigned(31 downto 0) := (others => '0');
 begin
-  reset <= '0';
+  reset_en <= '0';
   set_port <= '0';
+  load_en  <= '0';
   case ( current_state) is 
     when idle => 
-      reset <= '1'; 
+      reset_en <= '1'; 
+    when load => 
+      load_en  <= '1';
     when done => 
       set_port <= '1';
       S := partials(0);
@@ -97,7 +103,7 @@ end process output_logic;
 load_magnitudes: process( clk_port )
 begin 
   if rising_edge( clk_port ) then 
-    if reset = '1' then 
+    if reset_en = '1' then 
 
       A_mag32 <= (others => '0'); 
       B_mag16 <= (others => '0');
@@ -127,7 +133,7 @@ end process load_magnitudes;
 load_auxilliary: process( clk_port )
 begin 
   if rising_edge( clk_port) then 
-    if reset = '1' then 
+    if reset_en = '1' then 
       negative_flag <= '0'; 
       shift_count <= (others => '0');
 
