@@ -3,12 +3,12 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity rotation_manager_tb is 
-end rotation_manager_tb;
+entity rotation_tb is 
+end rotation_tb;
 
-architecture testbench of rotation_manager_tb is 
+architecture testbench of rotation_tb is 
 ----------------------- component declarations ---------------------------
-component rotation_manager is 
+component rotation is 
   port (
     clk_port   : in std_logic; 
     angle      : in std_logic_vector(15 downto 0);
@@ -24,7 +24,7 @@ end component;
 
 begin 
 
-uut: rotation_manager 
+uut: rotation 
   port map(
     
           );

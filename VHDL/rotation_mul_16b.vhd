@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity rotation_16b is 
+entity rotation_mul_16b is 
 port( 
   clk_port   : in std_logic; 
   load_en    : in std_logic; 
@@ -12,12 +12,15 @@ port(
   products   : in array_4x16_t;  
   nx, ny, nz : out std_logic_vector(15 downto 0);
   set_port   : out std_logic); 
-end rotation_16b;
+end rotation_mul_16b;
 
-architecture behavioral of rotation_16b is 
+architecture behavioral of rotation_mul_16b is 
   type signed_4x16_t is array (0 to 3) of signed(15 downto 0); 
+  type direction_type is ( xaxis, yaxis, zaxis ); 
 
   signal sProducts : signed_4x16_t := (others => (others => '0'));
+  signal direction : direction_type; 
+  signal uDir      : unsigned(3 downto 0) := (others => '0');
 begin 
 
 -- set signed products for ease 
@@ -26,7 +29,12 @@ sProducts(1) <= signed(products(1));
 sProducts(2) <= signed(products(2));
 sProducts(3) <= signed(products(3));
 
--- comptue sums at start 
+uDir      <= unsigned(dir); 
+direction <= xaxis when uDir = 0 else 
+             yaxis when uDir = 1 else 
+             zaxis when uDir = 2; 
+
+-- compute sums at start 
 
 compute_rotation: process( clk_port )
   variable s1, s2 : signed(15 downto 0);
@@ -38,23 +46,22 @@ begin
       s1 := sProducts(0) + sProducts(3);
       s2 := sProducts(1) + sProducts(2);
       set_port <= '1';
-      case ( dir ) is 
-        when "00" => -- x 
+      case ( direction ) is 
+        when xaxis =>  
           nx <= static; 
           ny <= std_logic_vector(s1);
           nz <= std_logic_vector(s2);
-        when "01" => -- y 
+        when yaxis =>  
           nx <= std_logic_vector(s2);
           ny <= static; 
           nz <= std_logic_vector(s1);
-        when "10" => -- z  
+        when zaxis =>   
           nx <= std_logic_vector(s1);
           ny <= std_logic_vector(s2);
           nz <= static; 
       end case; 
     end if; 
   end if; 
-
 end process compute_rotation; 
 
 end architecture behavioral;
