@@ -104,13 +104,8 @@ load_magnitudes: process( clk_port )
 begin 
   if rising_edge( clk_port ) then 
     if reset_en = '1' then 
-
       A_mag32 <= (others => '0'); 
       B_mag16 <= (others => '0');
-      partials <= (others => (others => '0'));
-      mag32_shifts <= (others => (others => '0'));
-      AB <= (others => '0');
-
     elsif load_port = '1' then 
       -- get 2's complement of input values if negative 
       -- store in flip flop

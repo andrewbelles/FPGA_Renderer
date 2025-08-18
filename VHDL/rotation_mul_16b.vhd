@@ -20,7 +20,7 @@ architecture behavioral of rotation_mul_16b is
 
   signal sProducts : signed_4x16_t := (others => (others => '0'));
   signal direction : direction_type; 
-  signal uDir      : unsigned(3 downto 0) := (others => '0');
+  signal uDir      : unsigned(1 downto 0) := (others => '0');
 begin 
 
 -- set signed products for ease 

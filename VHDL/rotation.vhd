@@ -22,7 +22,7 @@ component sine_lut
     rads     : in std_logic_vector(15 downto 0); 
     sine     : out std_logic_vector(15 downto 0); 
     set_port : out std_logic); 
-end component;
+end component sine_lut;
 
 component set_operands_m16x16 is 
   port (
@@ -31,9 +31,9 @@ component set_operands_m16x16 is
     x,y,z    : in std_logic_vector(15 downto 0);
     operands : out array_3x16_t; 
     set_port : out std_logic);
-end set_operands_m16x16;
+end component set_operands_m16x16;
 
-component multipler_16x16
+component multiplier_16x16
   port (
     clk_port     : in std_logic;
     load_port    : in std_logic; 
@@ -43,9 +43,9 @@ component multipler_16x16
     AB           : out std_logic_vector(15 downto 0);
     AB_dig       : out std_logic_vector(3 downto 0);
     set_port     : out std_logic);
-end component; 
+end component multiplier_16x16; 
 
-component rotation_16b is 
+component rotation_mul_16b is 
   port (
     clk_port   : in std_logic; 
     load_en    : in std_logic; 
@@ -54,7 +54,7 @@ component rotation_16b is
     products   : in array_4x16_t; 
     nx, ny, nz : out std_logic_vector(15 downto 0);
     set_port   : out std_logic); 
-end component; 
+end component rotation_mul_16b; 
 
 ----------------------- local declarations -------------------------------
 -- signals
@@ -121,11 +121,11 @@ end process set_load;
 
 -- Once we've loaded operators and have trig values proceed with matmul
 
-prod1: multipler_16x16
+prod1: multiplier_16x16
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => '0',
     A          => operands(1),
     B          => cosine,
     A_dig      => dig8,
@@ -134,11 +134,11 @@ prod1: multipler_16x16
     AB_dig     => OPEN,
     set_port   => products_set(0));
 
-prod2: multipler_16x16
+prod2: multiplier_16x16
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => '0',
     A          => operands(1),
     B          => sine,
     A_dig      => dig8,
@@ -147,11 +147,11 @@ prod2: multipler_16x16
     AB_dig     => OPEN,
     set_port   => products_set(1));
 
-prod3: multipler_16x16
+prod3: multiplier_16x16
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => '0',
     A          => operands(2),
     B          => cosine,
     A_dig      => dig8,
@@ -160,11 +160,11 @@ prod3: multipler_16x16
     AB_dig     => OPEN,
     set_port   => products_set(2));
 
-prod4: multipler_16x16
+prod4: multiplier_16x16
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => '0',
     A          => operands(2),
     B          => inv_sine,
     A_dig      => dig8,
@@ -182,7 +182,7 @@ begin
   end if; 
 end process set_rotation_load; 
 
-update_point: rotation_16b 
+update_point: rotation_mul_16b 
   port map(
     clk_port => clk_port,
     load_en  => rotation_load, 

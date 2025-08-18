@@ -46,6 +46,8 @@ begin
         operands(0) <= z; 
         operands(1) <= x; 
         operands(2) <= y; 
+      when others => 
+        null; 
     end case; 
   end if; 
 end process get_operands;

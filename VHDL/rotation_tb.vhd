@@ -27,7 +27,7 @@ end component;
   signal nx, ny, nz : std_logic_vector(15 downto 0) := (others => '0');
   signal set_port   : std_logic := '0';
 -- constants 
-  constant clk_period : time := 100 ns; 
+  constant clk_period : time := 10 ns; 
 
 begin 
 
@@ -55,16 +55,16 @@ begin
   -- x,y,z will remain constant the entire tb 
   x <= x"3200"; -- 50.0
   y <= x"4600"; -- 70.0
-  z <= x"2800";
+  z <= x"2800"; -- 40.0 
 
   -- 30 degree rotation about x 
   angle <= x"0861"; 
-  dir   <= x"0"; 
-  wait for 5*clk_period;
+  dir   <= "00"; 
+  --wait for 8*clk_period;
 
   -- (-30) degree rotation about x 
-  angle <= x"5c27"; 
-  dir   <= x"0"; 
+  --angle <= x"5c27"; 
+  --dir   <= "00"; 
   --wait for 5*clk_period;
   wait; 
 end process stim_proc; 
