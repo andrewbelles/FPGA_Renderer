@@ -16,7 +16,7 @@ end rotation_mul_16b;
 
 architecture behavioral of rotation_mul_16b is 
   type signed_4x16_t is array (0 to 3) of signed(15 downto 0); 
-  type direction_type is ( xaxis, yaxis, zaxis ); 
+  type direction_type is ( xaxis, yaxis, zaxis, none ); 
 
   signal sProducts : signed_4x16_t := (others => (others => '0'));
   signal direction : direction_type; 
@@ -32,7 +32,8 @@ sProducts(3) <= signed(products(3));
 uDir      <= unsigned(dir); 
 direction <= xaxis when uDir = 0 else 
              yaxis when uDir = 1 else 
-             zaxis when uDir = 2; 
+             zaxis when uDir = 2 else
+             none; 
 
 -- compute sums at start 
 
@@ -59,6 +60,8 @@ begin
           nx <= std_logic_vector(s1);
           ny <= std_logic_vector(s2);
           nz <= static; 
+        when others => 
+          null; 
       end case; 
     end if; 
   end if; 

@@ -77,6 +77,8 @@ begin
   reset_en <= '0';
   set_port <= '0';
   load_en  <= '0';
+  AB       <= x"0000";
+  AB_dig   <= "0000";
   case ( current_state) is 
     when idle => 
       reset_en <= '1'; 
