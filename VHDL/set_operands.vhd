@@ -9,16 +9,16 @@ use work.array_types.all;
 --    y == "01", 1 
 --    z == "10", 2
 
-entity set_operands_m16x16 is 
+entity set_operands_m24x24 is 
 port(
   clk_port : in std_logic; 
   dir      : in std_logic_vector(1 downto 0);
-  x,y,z    : in std_logic_vector(15 downto 0); 
-  operands : out array_3x16_t; 
+  x,y,z    : in std_logic_vector(23 downto 0); 
+  operands : out array_3x24_t; 
   set_port : out std_logic); 
-end set_operands_m16x16;
+end set_operands_m24x24;
 
-architecture behavioral of set_operands_m16x16 is 
+architecture behavioral of set_operands_m24x24 is 
   signal dir_uint : unsigned(1 downto 0) := (others => '0');
   signal set      : std_logic := '0'; 
 begin 
@@ -46,6 +46,8 @@ begin
         operands(0) <= z; 
         operands(1) <= x; 
         operands(2) <= y; 
+      when others => 
+        null; 
     end case; 
   end if; 
 end process get_operands;

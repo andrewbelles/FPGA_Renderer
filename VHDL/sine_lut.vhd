@@ -538,8 +538,8 @@ angle <= signed(rads);
 phase <= shift_left((angle + (shift_right(angle, 2) + shift_right(angle, 5) - shift_right(angle, 7))), 1);
 
 -- handle cosine internally by adding turns to phase (specific to 2048 value table)  
-turns <=  unsigned(phase)          when cos_en = '1' else  
-         (unsigned(phase) + 16384) when cos_en = '0'; 
+turns <=  unsigned(phase)          when cos_en = '0' else  
+         (unsigned(phase) + 16384) when cos_en = '1'; 
 bin   <= turns + 16; 
 idx   <= to_integer( bin(15 downto 5));    
 

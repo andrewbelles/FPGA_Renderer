@@ -5,11 +5,12 @@ use work.array_types.all;
 
 entity rotation is 
 port( 
-  clk_port   : in std_logic; 
+  clk_port   : in std_logic;
+  reset_port : in std_logic; 
   angle      : in std_logic_vector(15 downto 0);
   dir        : in std_logic_vector(1 downto 0);
-  x, y, z    : in std_logic_vector(15 downto 0); 
-  nx, ny, nz : out std_logic_vector(15 downto 0);
+  x, y, z    : in std_logic_vector(23 downto 0); 
+  nx, ny, nz : out std_logic_vector(23 downto 0);
   set_port   : out std_logic);
 end rotation; 
 
@@ -22,57 +23,58 @@ component sine_lut
     rads     : in std_logic_vector(15 downto 0); 
     sine     : out std_logic_vector(15 downto 0); 
     set_port : out std_logic); 
-end component;
+end component sine_lut;
 
-component set_operands_m16x16 is 
+component set_operands_m24x24 is 
   port (
     clk_port : in std_logic;
     dir      : in std_logic_vector(1 downto 0);
-    x,y,z    : in std_logic_vector(15 downto 0);
-    operands : out array_3x16_t; 
+    x,y,z    : in std_logic_vector(23 downto 0);
+    operands : out array_3x24_t; 
     set_port : out std_logic);
-end set_operands_m16x16;
+end component set_operands_m24x24;
 
-component multipler_16x16
+component multiplier_24x24
   port (
     clk_port     : in std_logic;
     load_port    : in std_logic; 
     reset_port   : in std_logic; 
-    A, B         : in std_logic_vector(15 downto 0);
-    A_dig, B_dig : in std_logic_vector(3 downto 0);
-    AB           : out std_logic_vector(15 downto 0);
-    AB_dig       : out std_logic_vector(3 downto 0);
+    A, B         : in std_logic_vector(23 downto 0);
+    A_dig, B_dig : in std_logic_vector(4 downto 0);
+    AB           : out std_logic_vector(23 downto 0);
+    AB_dig       : out std_logic_vector(4 downto 0);
     set_port     : out std_logic);
-end component; 
+end component multiplier_24x24; 
 
-component rotation_16b is 
+component rotation_mul_24b is 
   port (
     clk_port   : in std_logic; 
     load_en    : in std_logic; 
     dir        : in std_logic_vector(1 downto 0);
-    static     : in std_logic_vector(15 downto 0);
-    products   : in array_4x16_t; 
-    nx, ny, nz : out std_logic_vector(15 downto 0);
+    static     : in std_logic_vector(23 downto 0);
+    products   : in array_4x24_t; 
+    nx, ny, nz : out std_logic_vector(23 downto 0);
     set_port   : out std_logic); 
-end component; 
+end component rotation_mul_24b; 
 
 ----------------------- local declarations -------------------------------
 -- signals
-  signal sine, cosine    : std_logic_vector(15 downto 0);
-  signal inv_sine        : std_logic_vector(15 downto 0);
-  signal operands        : array_3x16_t := (others => (others => '0'));
-  signal cosine_set      : std_logic; 
-  signal sine_set        : std_logic;
-  signal operand_set     : std_logic; 
-  signal multiplier_load : std_logic; 
-  signal rotation_load   : std_logic; 
-  signal products_set    : std_logic_vector(3 downto 0);
-  signal products        : array_4x16_t := (others => (others => '0'));
+  signal sine, cosine    : std_logic_vector(23 downto 0) := (others => '0');
+  signal sin16, cos16    : std_logic_vector(15 downto 0) := (others => '0'); 
+  signal inv_sine        : std_logic_vector(23 downto 0) := (others => '0');
+  signal operands        : array_3x24_t := (others => (others => '0'));
+  signal cosine_set      : std_logic := '0'; 
+  signal sine_set        : std_logic := '0';
+  signal operand_set     : std_logic := '0'; 
+  signal multiplier_load : std_logic := '0'; 
+  signal rotation_load   : std_logic := '0'; 
+  signal products_set    : std_logic_vector(3 downto 0) := (others => '0');
+  signal products        : array_4x24_t := (others => (others => '0'));
 
 -- constants 
   -- digit counts 
-  constant dig14 : std_logic_vector(3 downto 0) := x"E";
-  constant dig8  : std_logic_vector(3 downto 0) := x"8";
+  constant dig14 : std_logic_vector(4 downto 0)  := "01110";
+  constant dig12  : std_logic_vector(4 downto 0) := "01100";
 begin 
 
 get_sin: sine_lut
@@ -80,7 +82,7 @@ get_sin: sine_lut
     clk_port => clk_port,
     cos_en   => '0',
     rads     => angle,
-    sine     => sine,
+    sine     => sin16,
     set_port => sine_set); 
 
 get_cos: sine_lut
@@ -88,10 +90,10 @@ get_cos: sine_lut
     clk_port => clk_port,
     cos_en   => '1',
     rads     => angle,
-    sine     => cosine,
+    sine     => cos16,
     set_port => cosine_set); 
 
-get_operands: set_operands_m16x16
+get_operands: set_operands_m24x24
   port map(
     clk_port => clk_port, 
     dir      => dir, 
@@ -101,10 +103,15 @@ get_operands: set_operands_m16x16
     operands => operands, 
     set_port => operand_set); 
 
--- TODO: Write without variable? 
+zero_extend_trig: process( sin16, cos16 )
+begin 
+  sine <= std_logic_vector(resize(signed(sin16), 24));
+  cosine <= std_logic_vector(resize(signed(cos16), 24));
+end process zero_extend_trig; 
+
 -- sensitive to sine and cosine
 invert_sine: process( sine )
-  variable invert_helper : signed(15 downto 0) := (others => '0');
+  variable invert_helper : signed(23 downto 0) := (others => '0');
 begin 
   invert_helper := -signed(sine); 
   inv_sine      <= std_logic_vector(invert_helper); 
@@ -121,53 +128,53 @@ end process set_load;
 
 -- Once we've loaded operators and have trig values proceed with matmul
 
-prod1: multipler_16x16
+prod1: multiplier_24x24
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => reset_port,
     A          => operands(1),
     B          => cosine,
-    A_dig      => dig8,
+    A_dig      => dig12,
     B_dig      => dig14,
     AB         => products(0), 
     AB_dig     => OPEN,
     set_port   => products_set(0));
 
-prod2: multipler_16x16
+prod2: multiplier_24x24
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => reset_port,
     A          => operands(1),
     B          => sine,
-    A_dig      => dig8,
+    A_dig      => dig12,
     B_dig      => dig14,
     AB         => products(1), 
     AB_dig     => OPEN,
     set_port   => products_set(1));
 
-prod3: multipler_16x16
+prod3: multiplier_24x24
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => reset_port,
     A          => operands(2),
     B          => cosine,
-    A_dig      => dig8,
+    A_dig      => dig12,
     B_dig      => dig14,
     AB         => products(2), 
     AB_dig     => OPEN,
     set_port   => products_set(2));
 
-prod4: multipler_16x16
+prod4: multiplier_24x24
   port map(
     clk_port   => clk_port, 
     load_port  => multiplier_load, 
-    reset_port => OPEN,
+    reset_port => reset_port,
     A          => operands(2),
     B          => inv_sine,
-    A_dig      => dig8,
+    A_dig      => dig12,
     B_dig      => dig14,
     AB         => products(3), 
     AB_dig     => OPEN,
@@ -182,7 +189,7 @@ begin
   end if; 
 end process set_rotation_load; 
 
-update_point: rotation_16b 
+update_point: rotation_mul_24b 
   port map(
     clk_port => clk_port,
     load_en  => rotation_load, 
