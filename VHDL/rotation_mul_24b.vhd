@@ -3,22 +3,22 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity rotation_mul_16b is 
+entity rotation_mul_24b is 
 port( 
   clk_port   : in std_logic; 
   load_en    : in std_logic; 
   dir        : in std_logic_vector(1 downto 0); 
-  static     : in std_logic_vector(15 downto 0);
-  products   : in array_4x16_t;  
-  nx, ny, nz : out std_logic_vector(15 downto 0);
+  static     : in std_logic_vector(23 downto 0);
+  products   : in array_4x24_t;  
+  nx, ny, nz : out std_logic_vector(23 downto 0);
   set_port   : out std_logic); 
-end rotation_mul_16b;
+end rotation_mul_24b;
 
-architecture behavioral of rotation_mul_16b is 
-  type signed_4x16_t is array (0 to 3) of signed(15 downto 0); 
+architecture behavioral of rotation_mul_24b is 
+  type signed_4x24_t is array (0 to 3) of signed(23 downto 0); 
   type direction_type is ( xaxis, yaxis, zaxis, none ); 
 
-  signal sProducts : signed_4x16_t := (others => (others => '0'));
+  signal sProducts : signed_4x24_t := (others => (others => '0'));
   signal direction : direction_type; 
   signal uDir      : unsigned(1 downto 0) := (others => '0');
 begin 
@@ -38,7 +38,7 @@ direction <= xaxis when uDir = 0 else
 -- compute sums at start 
 
 compute_rotation: process( clk_port )
-  variable s1, s2 : signed(15 downto 0);
+  variable s1, s2 : signed(23 downto 0);
 begin
   s1 := (others => '0');
   s2 := (others => '0');
