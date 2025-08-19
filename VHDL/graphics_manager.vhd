@@ -43,11 +43,13 @@ signal counter_tc : std_logic := '0';
 signal inc_counter : std_logic := '0';
 signal reset_counter : std_logic := '0';
 
--- Points
+-- New Points
 type point8_array is array(0 to 3) of std_logic_vector(7 downto 0); -- holds the 4 8 bit x/y coords
 signal x_points, y_points : point8_array := (others => (others => '0'));
-
--- keep track of which buffer is active
+signal load_new_pts : std_logic := '0';
+--
+-- Buffer writing
+signal load_mem_sg : std_logic := '0';
 signal buffer_write_sel_sg  : std_logic := '0'; -- holds which buffer is active for framebuffer module to write to
 signal flip_buffer : std_logic := '0'; -- signal from FSM to flip buffer
 
@@ -57,7 +59,7 @@ signal x0_bres, y0_bres, x1_bres, y1_bres, x_bres, y_bres         : std_logic_ve
 
 
 
-type state is (IDLE, ACTIVATE, LOAD, DRAW);
+type state is (IDLE, ACTIVATE, COMPUTE, INC, DRAW);
 signal current_state, next_state : state := IDLE;
 
 component bresenham is
@@ -89,16 +91,15 @@ bres : bresenham
 -- DATAPATH
 
 -- Sync
-xy_proc   : process(clk)
-begin
-    if(rising_edge(clk))) then
--- counter for how many times Bresenham module has been run. Maxes out at 6 times for 6 pairs of points
+
+        
+-- counter for how many times Bresenham module has been run. Maxes out at 5 for 6 pairs of points
 count_proc : process(clk) 
 begin
     if(rising_edge(clk)) then
         if(reset_counter = '1') then
             counter <= (others => '0'); -- start at 0
-        elsif(done_bres = '1') then -- if bresenham is done
+        elsif(inc_counter = '1') then -- if bresenham algorithm is done between 2 points
                 counter <= counter + 1;
         end if;
     end if;
@@ -107,18 +108,18 @@ end process;
 -- register for which buffer the framebuffer module should write to
 buffer_proc : process(clk)
 begin
-    if(rising_edge(clk) then
+    if(rising_edge(clk)) then
         if(flip_buffer = '1') then
-            buffer_write_sel_sg <= NOT buffer_write_sel_sg;
+            buffer_write_sel_sg <= NOT buffer_write_sel_sg; -- go to the other buffer
         end if;
     end if;
 end process;
 
 -- assign the x_points and y_points into array so that can easily access them by index
-process(clk)
+load_pts: process(clk)
 begin
     if(rising_edge(clk)) then
-        if(new_vertices = '1') then -- captures the points on new_vertices
+        if(load_new_pts = '1') then -- captures the points on new_vertices
             x_points(0) <= vertices(0)(15 downto 8);
             y_points(0) <= vertices(0)(7 downto 0);
             x_points(1) <= vertices(1)(15 downto 8);
@@ -129,16 +130,18 @@ begin
             y_points(3) <= vertices(3)(7 downto 0);
         end if;
     end if;
-end process;      
+ end process;      
 
 
 -- process wires up the bresenham module to the correct pairs of points. There are 6 pairs of lines that we want to draw, so have 6 cases
 -- counter represents how many times Bresenhan has been run so far. 
 -- NOTE: This is clearly very hard-coded. Look into more general version that could do arbitrary number of points, such as with cube.
-bres_wiring : process(clk)
+
+-- put current state on it to ensure that it checks every state that bresneham module is wired correctly
+bres_input : process(current_state, counter)
 begin
-    if rising_edge(clk) then
-        if start_bres = '1' then
+  -- if rising_edge(clk) then
+     -- if load_new_pts = '1' then
             case counter is
                 when "000" =>  -- line 0: point0 -> point1
                     x0_bres <= x_points(0);
@@ -176,16 +179,32 @@ begin
                     x1_bres <= (others=>'0');
                     y1_bres <= (others=>'0');
             end case;
-        end if;
-    end if;
+     --  end if;
+  -- end if;
 end process;
 
 -- Async
+  
+-- assign x and y (memory address output) (address to read/write to) 
+xy_proc : process(plot_bres, x_bres, y_bres)
+begin
+    -- load while plot_bres is high
+    load_mem_sg <= plot_bres;
 
+    -- x and y are only valid when plot_bres (from bresenham modul) is high
+    if(plot_bres = '1') then
+        x <= x_bres;
+        y <= y_bres;
+    else
+        x <= (others => '0');
+        y <= (others => '0');
+    end if;
+end process;
+load_mem <= load_mem_sg;
 -- buffer write select signal 
 buffer_write_sel <= buffer_write_sel_sg;
 -- counter terminal count
-counter_tc <= '1' when counter = 6 else '0';
+counter_tc <= '1' when counter = 5 else '0';
 
 ------------------------------------------------------------------------------------------------------------------------------------
 -- FSM waits for new_vertices signal from central controller to assert. Then it activates bresenham 6 times, one
@@ -207,13 +226,15 @@ begin
                 next_state <= ACTIVATE;
             end if;
         when ACTIVATE =>
-            next_state <= LOAD;
-        when LOAD => 
-            if(counter_tc = '0' and plot_bres = '0') then
-                next_state <= ACTIVATE;
-            elsif(counter_tc = '1' and plot_bres = '0') then
+            next_state <= COMPUTE;
+        when COMPUTE => 
+            if(counter_tc = '0' and done_bres = '1') then
+                next_state <= INC;
+            elsif(counter_tc = '1' and done_bres = '1') then
                 next_state <= DRAW;
             end if;
+        when INC =>
+            next_state <= ACTIVATE;
         when DRAW =>
             next_state <= IDLE;
         when others =>
@@ -226,13 +247,16 @@ begin
     start_bres <= '0';
     reset_counter <= '0';
     flip_buffer <= '0';
+    inc_counter <= '0';
+    load_new_pts <= '0';
     case current_state is
         when IDLE =>
             reset_counter <= '1';
+            load_new_pts <= '1';
         when ACTIVATE =>
             start_bres <= '1';
-        when LOAD =>
-            load_mem <= '1';
+        when INC =>
+            inc_counter <= '1';
         when DRAW =>
             flip_buffer <= '1';
         when others =>

@@ -51,7 +51,7 @@ component framebuffer is
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- addess to write
           write_en            :   in std_logic;
           buffer_write_sel    :   in std_logic;
-          read_x, read_y      :   in std_logic_vector(15 downto 0); -- address to read
+          read_x, read_y      :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
@@ -59,7 +59,7 @@ component framebuffer is
         
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
-          VGA_out             :   out std_logic_vector(7 downto 0) -- framebuffer data, 8 bit for an 8 bit color
+          VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 8 bit for an 8 bit color
            );
 end component;
 
@@ -80,11 +80,10 @@ signal color    : STD_LOGIC_VECTOR(11 downto 0);
 
 signal write_x, write_y : std_logic_vector(7 downto 0);
 signal write_en, buffer_write_sel         : std_logic;
-signal read_x, read_y : std_logic_vector(15 downto 0);
+signal read_x, read_y : std_logic_vector(9 downto 0);
+signal dummy_reset, dummy_nv : std_logic;
+signal dummy_vertices : array_4x16_t;
 
-signal dummy_reset : std_logic;
-signal dummy_new_point : std_logic;
-signal dummy_Vertices : array_4x16_t;
 begin
 
 -- wire the controller
@@ -98,7 +97,7 @@ controller : vga_controller
         pixel_y => read_y);
 datapath : framebuffer
     Port Map(clk => clk_ext_port,
-          reset => open,
+          reset => dummy_reset,
           write_x => write_x ,
           write_y => write_y,
           write_en => write_en,
@@ -115,7 +114,7 @@ datapath : framebuffer
 manager : graphics_manager
     Port Map(
     clk => clk_ext_port,
-    new_vertices => dummy_new_verticeses,
+    new_vertices => dummy_nv,
     vertices => dummy_vertices,
     buffer_write_sel => buffer_write_sel,
     load_mem => write_en,
