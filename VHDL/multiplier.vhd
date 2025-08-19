@@ -87,6 +87,7 @@ begin
     when done => 
       set_port <= '1';
       S := partials(0);
+      S := shift_right(S, to_integer(shift_count));
       if negative_flag = '0' then 
         AB <= std_logic_vector( signed(S(23 downto 0)) );
       else 
