@@ -2,79 +2,90 @@ library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all; 
 
-entity multiplier_16x16_tb is 
-end multiplier_16x16_tb; 
+entity multiplier_24x24_tb is 
+end multiplier_24x24_tb; 
 
-architecture testbench of multiplier_16x16_tb is 
-  component multiplier_16x16 is 
+architecture testbench of multiplier_24x24_tb is 
+  component multiplier_24x24 is 
     port(
       clk_port    : in std_logic;  
       load_port   : in std_logic;
-      A, B        : in std_logic_vector(15 downto 0);
-      A_dig       : in std_logic_vector(3 downto 0);
-      B_dig       : in std_logic_vector(3 downto 0); 
-      AB          : out std_logic_vector(15 downto 0));
+      reset_port  : in std_logic; 
+      A, B        : in std_logic_vector(23 downto 0);
+      A_dig       : in std_logic_vector(4 downto 0);
+      B_dig       : in std_logic_vector(4 downto 0); 
+      AB          : out std_logic_vector(23 downto 0);
+      AB_dig      : out std_logic_vector(4 downto 0);
+      set_port    : out std_logic);
   end component; 
 
-signal clk_port, load_sample : std_logic := '0';
-signal A_sample, B_sample    : std_logic_vector(15 downto 0);
-signal A_dig_sample          : std_logic_vector(3 downto 0);
-signal B_dig_sample          : std_logic_vector(3 downto 0);
-signal AB_sample             : std_logic_vector(15 downto 0);
+signal clk_port, load_en : std_logic := '0';
+signal reset_port        : std_logic := '0'; 
+signal A, B              : std_logic_vector(23 downto 0) := (others => '0');
+signal A_dig             : std_logic_vector(4 downto 0)  := (others => '0');
+signal B_dig             : std_logic_vector(4 downto 0)  := (others => '0');
+signal AB                : std_logic_vector(23 downto 0) := (others => '0');
+signal AB_dig            : std_logic_vector(4 downto 0) := (others => '0');
+signal set_port          : std_logic := '0'; 
 
 constant clk_period : time := 10 ns;
 
 begin 
-uut: multiplier_16x16 
+uut: multiplier_24x24 
 port map(
-  clk_port => clk_port,
-  load_port => load_sample,
-  A => A_sample, 
-  B => B_sample, 
-  A_dig => A_dec_count_sample,
-  B_dig => B_dec_count_sample,
-  AB => AB_sample);
+  clk_port   => clk_port,
+  load_port  => load_en,
+  reset_port => reset_port,
+  A          => A, 
+  B          => B, 
+  A_dig      => A_dig,
+  B_dig      => B_dig,
+  AB         => AB,
+  AB_dig     => AB_dig,
+  set_port   => set_port);
+
 clock_proc: process 
 begin
   clk_port <= not(clk_port);
   wait for clk_period/2;
 end process clock_proc;
 
-stim_proc: process 
-begin  
-  -- 10.5 x 12.3 -> 7.8
-  -- A  := 4.625
-  -- B  := 16.125 
-  -- AB := 74.57812500 : 0x4a94 
-  A_sample <= x"0094";
-  A_dig_sample <= x"5";
-  B_sample <= x"0081";
-  B_dig_sample <= x"3";
-  load_sample <= '1'; 
-  wait for 3*clk_period;
+stim_proc : process
+begin
+  -- A: 4.625 B: 16.125 -> AB: 74.578125
+  -- AB, 11.12 -> 0x04A940
+  A       <= x"004A00";
+  A_dig   <= "01100";          
+  B       <= x"010200";
+  B_dig   <= "01100";
+  load_en <= '1';
+  wait for 8*clk_period;
 
-  -- (-)2.14 x 7.8 -> (-)7.8
-  -- A  := -0.70710678118655
-  -- B  := 43.78125
-  -- AB := -30.95801876 : 0xe10b
-  A_sample <= x"d2bf";
-  A_dig_sample <= x"E";
-  B_sample <= x"2bc8";
-  B_dig_sample <= x"8";
-  load_sample <= '1'; 
-  wait for 3*clk_period;
+  reset_port    <= '1'; 
+  wait for 2*clk_period; 
+  reset_port    <= '0'; 
 
-  -- 7.8 x (-)7.8 -> (-)7.8
-  -- A  := 18.421875 
-  -- B  := -4.12475191
-  -- AB := -75.98566409 : 0xb404
-  A_sample <= x"126c";
-  A_dig_sample <= x"8";
-  B_sample <= x"fbe0";
-  B_dig_sample <= x"8";
-  load_sample <= '1'; 
-  wait for 3*clk_period;
-
-end process stim_proc; 
+  -- A: -0.70710678 B: 43.78125 -> AB: -30.9580
+  -- AB, 11.12 -> 0xFE10AC
+  A       <= x"FFF4B0";
+  A_dig   <= "01100";
+  B       <= x"02BC80";
+  B_dig   <= "01100";
+  load_en <= '1';
+  wait for 8*clk_period;
+  
+  reset_port    <= '1'; 
+  wait for 2*clk_period; 
+  reset_port    <= '0'; 
+  
+  -- A: 18.421875 B: -4.12475191 -> AB: -75.985664
+  -- AB, 11.12 -> -75.98566 -> 0xFB403B
+  A       <= x"0126C0";
+  A_dig   <= "01100";
+  B       <= x"FFBE01";
+  B_dig   <= "01100";
+  load_en <= '1';
+  wait;
+end process;
 
 end;
