@@ -31,6 +31,8 @@ Port ( clk_ext_port	  : in  std_logic;	-- mapped to external IO device (100 MHz 
        blue           : out std_logic_vector(3 downto 0);
        HS             : out std_logic;
        VS             : out std_logic 		
+       
+       
  );
 end vga_test_shell;
 
@@ -84,6 +86,10 @@ signal read_x, read_y : std_logic_vector(9 downto 0);
 signal dummy_reset, dummy_nv : std_logic;
 signal dummy_vertices : array_4x16_t;
 
+
+-- test signal 
+signal pulse_counter : integer := 0;
+
 begin
 
 -- wire the controller
@@ -121,8 +127,34 @@ manager : graphics_manager
     x => write_x,
     y => write_y
     );
+
+test_vertices: process(clk_ext_port)
+begin
+    if rising_edge(clk_ext_port) then
+        -- hold dummy vertices
+        dummy_vertices(0) <= "0000000011110000";
+        dummy_vertices(1) <= "0000000011001000";
+        dummy_vertices(2) <= "0000000010010110";
+        dummy_vertices(3) <= "0000000010000010";
+
+        -- increment counter
+        pulse_counter <= pulse_counter + 1;
+
+        -- generate one-clock pulse for new_vertices
+        if pulse_counter = 1000000 then  -- adjust for timing
+            dummy_nv <= '1';
+            pulse_counter <= 0;
+        else
+            dummy_nv <= '0';
+        end if;
+    end if;
+end process;
+
+
+    
 -- wire the correct colors by slicing up color vector into groups of 4
 red <= color(11) & color(10) & color(9) & color(8);
 green <= color(7) & color(6) & color(5) & color(4);
 blue <= color(3) & color(2) & color(1) & color(0);
+
 end Behavioral;

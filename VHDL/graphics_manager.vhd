@@ -28,7 +28,7 @@ use work.array_types.all;
 
 entity graphics_manager is
 Port (clk                  :       in std_logic;
-      new_vertices         :       in  std_logic; -- from central controller, signals there are new verticies ready
+      new_vertices         :       in  std_logic; -- from central controller, signals there are new vertices ready
       vertices             :       in  array_4x16_t;
       buffer_write_sel     :       out std_logic;
       load_mem             :       out std_logic;
