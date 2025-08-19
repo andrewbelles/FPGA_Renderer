@@ -39,9 +39,6 @@ entity framebuffer_manager is
           
           write_x, write_y           : in  unsigned(7 downto 0);
           write_en                   : in std_logic
-          
-          
-          
            );
 end framebuffer_manager;
 

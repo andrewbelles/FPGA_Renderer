@@ -21,9 +21,9 @@ use IEEE.NUMERIC_STD.ALL;
 entity bresenham is
 Port (clk, reset        :   in std_logic;
       start             :   in std_logic;
-      x0, y0, x1, y1    :   in std_logic_vector(10 downto 0);
+      x0, y0, x1, y1    :   in std_logic_vector(7 downto 0);
       plot              :   out std_logic;    
-      x, y              :   out std_logic_vector(10 downto 0);
+      x, y              :   out std_logic_vector(7 downto 0);
       done              :   out std_logic);
 end bresenham;
 
@@ -37,9 +37,9 @@ architecture Behavioral of bresenham is
 --variable y1_sg : signed(11 downto 0) := signed('0' & y1);
 
 -- signals for registers
-signal err : signed(11 downto 0); -- 11 bit so that it has range of -2048 to signal
-signal x_sg : signed(11 downto 0);
-signal y_sg : signed(11 downto 0);
+signal err : signed(8 downto 0); -- 11 bit so that it has range of -2048 to signal
+signal x_sg : signed(8 downto 0);
+signal y_sg : signed(8 downto 0);
 
 type state is (IDLE, RUN);
 signal current_state, next_state : state := IDLE;
@@ -47,12 +47,12 @@ signal current_state, next_state : state := IDLE;
 begin
 
 process(clk)
-variable dx, dy, err, e2 : signed(11 downto 0);
+variable dx, dy, err, e2 : signed(8 downto 0);
 variable right, down     : std_logic;
-variable x0_var : signed(11 downto 0);
-variable x1_var : signed(11 downto 0);
-variable y0_var : signed(11 downto 0);
-variable y1_var : signed(11 downto 0);
+variable x0_var : signed(8 downto 0);
+variable x1_var : signed(8 downto 0);
+variable y0_var : signed(8 downto 0);
+variable y1_var : signed(8 downto 0);
 begin
     if(rising_edge(clk)) then
         done <= '0';
@@ -114,8 +114,8 @@ begin
     end if;
 end process;
 
-x <= std_logic_vector(x_sg(10 downto 0));
-y <= std_logic_vector(y_sg(10 downto 0));
+x <= std_logic_vector(x_sg(7 downto 0));
+y <= std_logic_vector(y_sg(7 downto 0));
 
 
 
