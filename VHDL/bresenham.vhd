@@ -34,7 +34,7 @@ architecture Behavioral of bresenham is
 --variable x0_sg : signed(11 downto 0) := signed('0' & x0);
 --variable x1_sg : signed(11 downto 0) := signed('0' & x1);
 ---variable y0_sg : signed(11 downto 0) := signed('0' & y0);
---variable y1_sg : signed(11 downto 0) := signed('0' & y1);
+--variable y1_sg : signed(11 downto 0) := signed('0' & y1);  
 
 -- signals for registers
 signal err : signed(8 downto 0); -- 11 bit so that it has range of -2048 to signal

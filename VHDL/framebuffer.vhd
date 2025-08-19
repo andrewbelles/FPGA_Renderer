@@ -27,6 +27,10 @@ entity framebuffer is
     Port (clk                 :   in std_logic;
           reset               :   in std_logic;
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- addess to write
+          
+          -- Needs to have a data in line
+          
+          
           write_en            :   in std_logic;
           buffer_write_sel    :   in std_logic;
           read_x, read_y      :   in std_logic_vector(9 downto 0); -- address to read
@@ -42,7 +46,8 @@ entity framebuffer is
 end framebuffer;
 
 architecture Behavioral of framebuffer is
-signal buf0, buf1 : buf256x256 := (others => '0'); -- 2 buffers 
+
+signal buf0, buf1 : buf256x256; -- 2 buffers 
 signal write_addr : std_logic_vector(15 downto 0) := (others => '0'); -- address to write 
 signal read_addr  : std_logic_vector(15 downto 0) := (others => '0'); -- address to read
 -- buffer output value is 12 bits, for now just doing all 0s or 1s
@@ -59,10 +64,10 @@ begin
 write: process(clk)
 begin
     if(rising_edge(clk)) then
-        if(reset = '1') then
-            buf0 <= (others => '0');
-            buf1 <= (others => '0');
-        elsif(write_en = '1') then
+    --    if(reset = '1') then
+       --     buf0 <= (others => '0');
+      --      buf1 <= (others => '0');
+        if(write_en = '1') then
             if(buffer_write_sel = '0') then
                 buf0(to_integer(unsigned(write_addr))) <= '1';
             elsif(buffer_write_sel = '1') then
@@ -96,12 +101,12 @@ begin
                 end if;
             end if;
         else 
-            buffer_out <= (others => '0');
+            buffer_out <= (others => '0'); -- if not in center of screen, just print black
         end if;
     end if;
 end process;
 
-
+-- slows down video on and HS by one clock cycle so that it is in sync with buffer_out (BRAM takes 1 cycle to read)
 pipeline : process(clk)
 begin
     if(rising_edge(clk)) then
@@ -111,27 +116,30 @@ begin
     end if;
 end process;
 
--- asynchronous computes address 
--- address is y*256+x which can be done by shifting y left 8 times, oring it with x
--- need to prepend 8 0s to x/y since they are only 8 bits 
+-- asynchronously computes write address 
+-- address is y*256+x which can be done by shifting y left 8 times, or with x
+
 write_addr <= std_logic_vector(
            (unsigned(write_y) & unsigned(write_x))
         );
         
 -- process to find address to read
 raddr: process(read_x, read_y)
-    variable x_offset, y_offset : unsigned(9 downto 0);
 begin
     -- in center 256x256 window of screen
     if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
         unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
 
-        x_offset := unsigned(read_x) - 192;
-        y_offset := unsigned(read_y) - 112;
-        read_addr <= std_logic_vector(y_offset(7 downto 0) & x_offset(7 downto 0)); -- performs shift by 8 and then OR with x 
+        -- offsets the read_x and read_y so that (192,112) is (0,0) address in the buffer.
+        -- must then resize result to be 8 bit to match size of read_addr
+        -- finally, as with write address, shifts y left by 8 (*256), then adds x
+        read_addr <= std_logic_vector(
+                resize(unsigned(read_y) - to_unsigned(112,10),8) & 
+                resize(unsigned(read_x) - to_unsigned(192,10),8)
+            ); 
 
     else
-        read_addr <= (others => '0');
+        read_addr <= (others => '0'); -- if not in center of screen, don't care because not reading at all
     end if;
 end process;
 

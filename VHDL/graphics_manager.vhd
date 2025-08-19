@@ -37,14 +37,14 @@ Port (clk                  :       in std_logic;
 end graphics_manager;
 
 architecture Behavioral of graphics_manager is
--- counter keeps track of drawing each line; there are 6 pairs of verticies that need to run bresenham
+-- counter keeps track of how many lines have been drawn; there are 6 pairs of verticies that need to run bresenham
 signal counter    : unsigned(2 downto 0) := (others => '0');
 signal counter_tc : std_logic := '0';
 signal inc_counter : std_logic := '0';
 signal reset_counter : std_logic := '0';
 
 -- New Points
-type point8_array is array(0 to 3) of std_logic_vector(7 downto 0); -- holds the 4 8 bit x/y coords
+type point8_array is array(0 to 3) of std_logic_vector(7 downto 0); -- holds the four 8 bit x/y coords
 signal x_points, y_points : point8_array := (others => (others => '0'));
 signal load_new_pts : std_logic := '0';
 --
@@ -90,7 +90,7 @@ bres : bresenham
 ------------------------------------------------------------------------------------------------------------------------------------
 -- DATAPATH
 
--- Sync
+-- SYNCHRONOUS
 
         
 -- counter for how many times Bresenham module has been run. Maxes out at 5 for 6 pairs of points
@@ -99,7 +99,7 @@ begin
     if(rising_edge(clk)) then
         if(reset_counter = '1') then
             counter <= (others => '0'); -- start at 0
-        elsif(inc_counter = '1') then -- if bresenham algorithm is done between 2 points
+        elsif(inc_counter = '1') then -- if bresenham algorithm is completed between 2 points
                 counter <= counter + 1;
         end if;
     end if;
@@ -132,55 +132,56 @@ begin
     end if;
  end process;      
 
+-- ASYNCHRONOUS 
 
 -- process wires up the bresenham module to the correct pairs of points. There are 6 pairs of lines that we want to draw, so have 6 cases
 -- counter represents how many times Bresenhan has been run so far. 
 -- NOTE: This is clearly very hard-coded. Look into more general version that could do arbitrary number of points, such as with cube.
 
 -- put current state on it to ensure that it checks every state that bresneham module is wired correctly
+
+
+
+-- DO I NEED TO PUT X_POINTS ETC ON SENSITIVITY LIST????????
 bres_input : process(current_state, counter)
 begin
-  -- if rising_edge(clk) then
-     -- if load_new_pts = '1' then
-            case counter is
-                when "000" =>  -- line 0: point0 -> point1
-                    x0_bres <= x_points(0);
-                    y0_bres <= y_points(0);
-                    x1_bres <= x_points(1);
-                    y1_bres <= y_points(1);
-                when "001" =>  -- line 1: point0 -> point2
-                    x0_bres <= x_points(0);
-                    y0_bres <= y_points(0);
-                    x1_bres <= x_points(2);
-                    y1_bres <= y_points(2);
-                when "010" =>  -- line 2: point0 -> point3
-                    x0_bres <= x_points(0);
-                    y0_bres <= y_points(0);
-                    x1_bres <= x_points(3);
-                    y1_bres <= y_points(3);
-                when "011" =>  -- line 3: point1 -> point2
-                    x0_bres <= x_points(1);
-                    y0_bres <= y_points(1);
-                    x1_bres <= x_points(2);
-                    y1_bres <= y_points(2);
-                when "100" =>  -- line 4: point1 -> point3
-                    x0_bres <= x_points(1);
-                    y0_bres <= y_points(1);
-                    x1_bres <= x_points(3);
-                    y1_bres <= y_points(3);
-                when "101" =>  -- line 5: point2 -> point3
-                    x0_bres <= x_points(2);
-                    y0_bres <= y_points(2);
-                    x1_bres <= x_points(3);
-                    y1_bres <= y_points(3);
-                when others =>
-                    x0_bres <= (others=>'0');
-                    y0_bres <= (others=>'0');
-                    x1_bres <= (others=>'0');
-                    y1_bres <= (others=>'0');
-            end case;
-     --  end if;
-  -- end if;
+    case counter is
+        when "000" =>  -- line 0: point0 -> point1
+            x0_bres <= x_points(0);
+            y0_bres <= y_points(0);
+            x1_bres <= x_points(1);
+            y1_bres <= y_points(1);
+        when "001" =>  -- line 1: point0 -> point2
+            x0_bres <= x_points(0);
+            y0_bres <= y_points(0);
+            x1_bres <= x_points(2);
+            y1_bres <= y_points(2);
+        when "010" =>  -- line 2: point0 -> point3
+            x0_bres <= x_points(0);
+            y0_bres <= y_points(0);
+            x1_bres <= x_points(3);
+            y1_bres <= y_points(3);
+        when "011" =>  -- line 3: point1 -> point2
+            x0_bres <= x_points(1);
+            y0_bres <= y_points(1);
+            x1_bres <= x_points(2);
+            y1_bres <= y_points(2);
+        when "100" =>  -- line 4: point1 -> point3
+            x0_bres <= x_points(1);
+            y0_bres <= y_points(1);
+            x1_bres <= x_points(3);
+            y1_bres <= y_points(3);
+        when "101" =>  -- line 5: point2 -> point3
+            x0_bres <= x_points(2);
+            y0_bres <= y_points(2);
+            x1_bres <= x_points(3);
+            y1_bres <= y_points(3);
+        when others =>
+            x0_bres <= (others=>'0');
+            y0_bres <= (others=>'0');
+            x1_bres <= (others=>'0');
+            y1_bres <= (others=>'0');
+    end case;
 end process;
 
 -- Async
@@ -191,7 +192,7 @@ begin
     -- load while plot_bres is high
     load_mem_sg <= plot_bres;
 
-    -- x and y are only valid when plot_bres (from bresenham modul) is high
+    -- x and y are only valid when plot_bres (from bresenham module) is high
     if(plot_bres = '1') then
         x <= x_bres;
         y <= y_bres;
@@ -200,16 +201,20 @@ begin
         y <= (others => '0');
     end if;
 end process;
+
+-- load_mem signal
 load_mem <= load_mem_sg;
+
 -- buffer write select signal 
 buffer_write_sel <= buffer_write_sel_sg;
+
 -- counter terminal count
 counter_tc <= '1' when counter = 5 else '0';
 
 ------------------------------------------------------------------------------------------------------------------------------------
 -- FSM waits for new_vertices signal from central controller to assert. Then it activates bresenham 6 times, one
 -- for each of the 6 combinations of vertex endpoints. After running it 6 times, it flips which buffer is active 
--- so that the graphics driver will swap to what was just written.
+-- so that the graphics driver will swap to displaying what was just written.
 state_update : process(clk) 
 begin
     if(rising_edge(clk)) then

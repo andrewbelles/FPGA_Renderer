@@ -111,8 +111,7 @@ BEGIN
     -- V_sync low between 480 and 482
     v_sync <= '0' when (vscan_counter >= v_display + bottom_border and vscan_counter < v_display + bottom_border + v_retrace) else '1';
 
-    -- H_video_on high between 0 and 639
-    h_video_on <= '1' when hscan_counter < h_display else '0';
+    -- H_video_on high between 0 and 639    h_video_on <= '1' when hscan_counter < h_display else '0';
 
     -- V_video high between 0 and 479
     v_video_on <= '1' when vscan_counter < v_display else '0'; 
