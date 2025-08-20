@@ -6,6 +6,7 @@ package array_types is
   type array_3x16_t is array (0 to 2) of std_logic_vector(15 downto 0);
   type array_4x16_t is array (0 to 3) of std_logic_vector(15 downto 0);
 
+  type array_2x24_t is array (0 to 1) of std_logic_vector(23 downto 0);
   type array_3x24_t is array (0 to 2) of std_logic_vector(23 downto 0);
   type array_4x24_t is array (0 to 3) of std_logic_vector(23 downto 0);
 
