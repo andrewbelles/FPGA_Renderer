@@ -28,9 +28,7 @@ entity framebuffer is
           reset               :   in std_logic;
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- address to write
           
-          -- Needs to have a data in line?
-          
-          
+          -- Needs to have a data in line
           write_en            :   in std_logic;
           buffer_write_sel    :   in std_logic;
           read_x, read_y      :   in std_logic_vector(9 downto 0); -- address to read
@@ -105,6 +103,9 @@ buff0 : blk_mem_gen_0
     douta => buff1_output
   );
   
+  
+  
+
   -- glue logic to set which BRAM gets the write address and which gets the read address
   addr_logic : process(buffer_write_sel, write_addr, read_addr)
       begin
@@ -140,26 +141,29 @@ end process;
 -- uses that BRAM's output port as its data
 -- FOR NOW: Just doing black or white (all 0s or all 1s). May add functionality in future 
 
-process(read_x, read_y, buffer_write_sel, buff0_output, buff1_output)
+process(clk)
 begin
-   if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
-    unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
-        if(buffer_write_sel = '1') then -- if writing to buffer 1, read from buffer 0
-            if(buff0_output(0) = '1') then
-                VGA_out_sg <= (others => '1');
-            else 
-                VGA_out_sg <= (others => '0');
+   if(rising_edge(clk)) then
+       if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
+        unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
+            if(buffer_write_sel = '1') then -- if writing to buffer 1, read from buffer 0
+                if(buff0_output(0) = '1') then
+                   
+                    VGA_out_sg <= (others => '1');
+                else 
+                    VGA_out_sg <= (others => '0');
+                end if;
+            elsif(buffer_write_sel = '0') then -- if writing to buffer 0, read from buffer 1
+                if(buff1_output(0) = '1') then
+                    VGA_out_sg <= (others => '1');
+                else 
+                    VGA_out_sg <= (others => '0');
+                end if;
             end if;
-        elsif(buffer_write_sel = '0') then -- if writing to buffer 0, read from buffer 1
-            if(buff1_output(0) = '1') then
-                VGA_out_sg <= (others => '1');
-            else 
-                VGA_out_sg <= (others => '0');
-            end if;
+        else 
+            VGA_out_sg <= (others => '0'); -- if not in center of screen, just print black
         end if;
-    else 
-        VGA_out_sg <= (others => '0'); -- if not in center of screen, just print black
-    end if;
+   end if; 
 end process;
   
 
