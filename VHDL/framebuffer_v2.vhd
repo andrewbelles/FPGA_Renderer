@@ -76,8 +76,10 @@ signal buff1_output : std_logic_vector(0 downto 0);
 
 -- VGA output value is 12 bits, for now just doing all 0s or 1s
 signal VGA_out_sg : std_logic_vector(11 downto 0) := (others => '0');
+signal VGA_out_en : std_logic_vector(1 downto 0) := (others => '0');
 
 -- signals to hold delayed value of video_on, etc (because read introduces a 1 cycle delay)
+
 signal video_on_delayed : std_logic_vector(1 downto 0);
 signal HS_delayed       : std_logic_vector(1 downto 0);
 signal VS_delayed       : std_logic_vector(1 downto 0);
@@ -174,7 +176,6 @@ begin
         
         VS_delayed(0) <= VS_in;
         VS_delayed(1) <= VS_delayed(0);
-
     end if;
 end process;
 

@@ -82,11 +82,15 @@ signal color    : STD_LOGIC_VECTOR(11 downto 0);
 
 signal write_x, write_y : std_logic_vector(7 downto 0);
 signal write_en, buffer_write_sel         : std_logic;
-signal read_x, read_y : std_logic_vector(9 downto 0);
+signal pixel_x, pixel_y : std_logic_vector(9 downto 0);
 signal dummy_reset: std_logic;
 signal dummy_nv : std_logic;
 signal dummy_vertices : array_4x16_t;
 
+
+-- signals
+signal pulse_done : std_logic := '0';
+signal pulse_counter : unsigned(7 downto 0) := (others => '0'); -- adjust width as needed
 
 -- test signal 
 --signal pulse_counter : integer := 0;
@@ -100,8 +104,8 @@ controller : vga_controller
         video_on => video_on,
         H_sync => HS_sig,
         V_sync => VS_sig,
-        pixel_x => read_x,
-        pixel_y => read_y);
+        pixel_x => pixel_x,
+        pixel_y => pixel_y);
 datapath : framebuffer
     Port Map(clk => clk_ext_port,
           reset => dummy_reset,
@@ -109,8 +113,9 @@ datapath : framebuffer
           write_y => write_y,
           write_en => write_en,
           buffer_write_sel => buffer_write_sel,
-          read_x => read_x,
-          read_y => read_y,
+          -- give framebuffer the delayed pixel_x and pixel_y because BRAM read takes 2 cycles
+          read_x => pixel_x,
+          read_y => pixel_y,
           video_on => video_on,
           HS_in => HS_sig, 
           VS_in => VS_sig,
@@ -133,11 +138,12 @@ manager : graphics_manager
 test_vertices: process(clk_ext_port)
 begin
     if rising_edge(clk_ext_port) then
-        -- hold dummy vertices for tetrahedron
-        dummy_vertices(0) <= "0000000011110000";
-        dummy_vertices(1) <= "0000000011001000";
-        dummy_vertices(2) <= "0000000010010110";
-        dummy_vertices(3) <= "0000000010000010";
+        if pulse_done = '0' then
+            -- hold vertices stable
+            dummy_vertices(0) <= "0000000000000000";
+            dummy_vertices(1) <= "1111111111111111";
+            dummy_vertices(2) <= "0100000010010110";
+            dummy_vertices(3) <= "0001000010000010";
 
         -- generate a single one-clock pulse
         if dummy_nv = '0' then
