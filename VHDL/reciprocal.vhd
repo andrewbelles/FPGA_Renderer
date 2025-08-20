@@ -120,13 +120,23 @@ end process load_value;
 -- Input normalization  
 --------------------------------------------------------------------------
 get_norm: process( clk_port )
+  variable shift_count : integer := 0; 
+  variable norm_helper : unsigned(23 downto 0) := (others => '0'); 
 begin
+  shift_count := to_integer(exponent); 
+  norm_helper := (others => '0'); 
+  
   if rising_edge( clk_port ) then
     if reset_en = '1' then 
       norm <= (others => '0');
     elsif normalize_en = '1' then
       -- shift by distance from 1.22 
-      norm <= shift_left(magnitude, to_integer(10 - exponent));
+      if shift_count >= 0 then 
+        norm_helper := shift_right(magnitude, shift_count);
+      else 
+        norm_helper := shift_left(magnitude, -shift_count); 
+      end if; 
+      norm <= shift_left(norm_helper, 10);  -- to 1.22
     end if; 
   end if; 
 end process get_norm; 
@@ -144,20 +154,19 @@ read_seed: newton_lut
 
 -- constantly address, will only be correct once 
 addr <= std_logic_vector(norm(21 downto 12));
+newton_seed <= fetched_seed;
 
-
-
-get_seed: process( clk_port )
-begin 
-  if rising_edge( clk_port ) then
-    bufr_seed <= fetched_seed;  
-    if reset_en = '1' then 
-      newton_seed <= (others => '0');
-    elsif seed_en = '1' then  
-      newton_seed <= bufr_seed; 
-    end if; 
-  end if;
-end process get_seed; 
+--get_seed: process( clk_port )
+--begin 
+--  if rising_edge( clk_port ) then
+--    bufr_seed <= fetched_seed;  
+--    if reset_en = '1' then 
+--      newton_seed <= (others => '0');
+--    elsif seed_en = '1' then  
+--      newton_seed <= bufr_seed; 
+--    end if; 
+--  end if;
+--end process get_seed; 
 
 --------------------------------------------------------------------------
 -- Newton's Method 
@@ -181,20 +190,29 @@ mantissa <= std_logic_vector(norm);
 set_port <= '1' when set_en = '1' else '0'; 
 
 set_reciprocal: process( clk_port )
-  variable invert_helper : signed(23 downto 0) := (others => '0');
+  variable shift_count   : integer := 0; 
+  variable recip_helper  : unsigned(23 downto 0) := (others => '0'); 
 begin 
-  invert_helper := (others => '0');
+  shift_count  := to_integer(exponent); 
+  recip_helper := (others => '0'); 
+  
   if rising_edge( clk_port ) then 
     if reset_port = '1' then 
       reciprocal <= (others => '0');
-    elsif set_en = '1' then 
-      if negative = '1' then 
-        -- invert value and pass along 
-        invert_helper := -signed(root);
-        reciprocal <= std_logic_vector(invert_helper); 
+    elsif set_en = '1' then
+      recip_helper := unsigned(root); 
+        
+      if shift_count >= 0 then 
+        recip_helper := shift_right(recip_helper, shift_count); 
       else 
-        reciprocal <= root;
+        recip_helper := shift_left(recip_helper, -shift_count); 
       end if; 
+      
+      if negative = '1' then 
+        reciprocal <= std_logic_vector( -signed(recip_helper) ); 
+      else 
+        reciprocal <= std_logic_vector( recip_helper ); 
+      end if;
     end if; 
   end if; 
 end process set_reciprocal;

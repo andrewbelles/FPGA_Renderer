@@ -30,7 +30,7 @@ component multiplier_24x24
 end component multiplier_24x24; 
 ----------------------- declarations -------------------------------------
 -- state declarations 
-  type state_type is ( idle, prod1, prod2, done ); 
+  type state_type is ( idle, prod1, bufr, prod2, done ); 
   signal current_state, next_state : state_type := idle;
 
 -- enables 
@@ -47,8 +47,10 @@ end component multiplier_24x24;
 -- signals for multiplication 
   signal A, B          : std_logic_vector(23 downto 0) := (others => '0'); 
   signal A_dig, B_dig  : std_logic_vector(4 downto 0) := (others => '0'); 
+  signal AB_dig        : std_logic_vector(4 downto 0) := (others => '0'); 
   signal AB            : std_logic_vector(23 downto 0) := (others => '0');
   signal diff, sRoot   : signed(23 downto 0) := (others => '0');
+  signal prod_helper   : signed(23 downto 0) := (others => '0');
 
 -- 2 represented as a 11.12 fixed point value 
   constant two_1112    : signed(23 downto 0) := x"002000";
@@ -67,7 +69,7 @@ multiply: multiplier_24x24
     A_dig      => A_dig,
     B_dig      => B_dig,
     AB         => AB, -- 11.12
-    AB_dig     => OPEN,
+    AB_dig     => AB_dig,
     set_port   => mul_set);
 
 -- set as flopped output values 
@@ -89,21 +91,18 @@ B_dig <= "10001";
 --------------------------------------------------------------------------
 -- Set intermediate and final values in memory 
 --------------------------------------------------------------------------
+
+prod_helper <= signed(AB);
 set_prods: process( clk_port )
-  variable prod_helper : signed(23 downto 0) := (others => '0');
 begin 
-  prod_helper := (others => '0');
-  clear_mul <= '0';
 
   if rising_edge( clk_port ) then 
-    prod_helper := signed(AB);
     if reset_en = '1' then 
       diff <= (others => '0');
       sRoot <= (others => '0');
 
     elsif mul_set = '1' then 
       -- safe to clear now 
-      clear_mul <= '1';
       if first_mul_en = '1' then 
         diff <= two_1112 - prod_helper;
 
@@ -131,7 +130,13 @@ begin
       when prod1 => 
         next_state <= prod1; 
         if mul_set = '1' then 
-          next_state <= prod2; 
+          next_state <= bufr; 
+        end if; 
+      when bufr => 
+        next_state <= bufr; 
+        -- mul set must go low from clear before proceeding 
+        if mul_set = '0' then 
+          next_state <= prod2;
         end if; 
       when prod2 => 
         next_state <= prod2; 
@@ -151,6 +156,7 @@ begin
   second_mul_en <= '0';
   mul_en        <= '0';
   set_en        <= '0';
+  clear_mul     <= '0';
 
   case ( current_state ) is 
     when idle => 
@@ -158,6 +164,8 @@ begin
     when prod1 => 
       first_mul_en <= '1';
       mul_en   <= '1';
+    when bufr => 
+      clear_mul <= '1';
     when prod2 =>
       second_mul_en <= '1';
       mul_en   <= '1';
