@@ -5,10 +5,11 @@ use work.array_types.all;
 
 entity newton_lut is 
   port (
-    clk_port : in std_logic; 
-    addr     : in std_logic_vector(9 downto 0); 
-    seed     : out std_logic_vector(23 downto 0); -- 6.17 signed fixed point 
-    set_port : out std_logic);  
+    clk_port   : in std_logic; 
+    reset_port : in std_logic; 
+    addr       : in std_logic_vector(9 downto 0); 
+    seed       : out std_logic_vector(23 downto 0); -- 6.17 signed fixed point 
+    set_port   : out std_logic);  
 end entity newton_lut; 
 
 architecture behavioral of newton_lut is 
@@ -282,8 +283,13 @@ idx   <= to_integer(uAddr);
 set_seed: process( clk_port )
 begin 
   if rising_edge( clk_port ) then 
-    set_port <= '1'; 
-    seed     <= newton_table(idx);
+    if reset_port = '1' then 
+      set_port <= '0';
+      seed <= (others => '0');
+    else 
+      set_port <= '1'; 
+      seed     <= newton_table(idx);
+    end if; 
   end if; 
 end process set_seed; 
 

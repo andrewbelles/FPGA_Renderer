@@ -17,20 +17,22 @@ architecture behavioral of reciprocal_24b is
 ----------------------- components ---------------------------------------
 component newton_lut  -- gets seed for newtons method 
   port (
-    clk_port : in std_logic; 
-    addr     : in std_logic_vector(9 downto 0);
-    seed     : out std_logic_vector(23 downto 0); 
-    set_port : out std_logic); 
+    clk_port   : in std_logic; 
+    reset_port : in std_logic; 
+    addr       : in std_logic_vector(9 downto 0); 
+    seed       : out std_logic_vector(23 downto 0); -- 6.17 signed fixed point 
+    set_port   : out std_logic);  
 end component newton_lut; 
 
 component newton_24b  -- interface that executes 2 step newtons-rhapson   
   port (
-    clk_port  : in std_logic; 
-    en_port   : in std_logic; 
-    mantissa  : in std_logic_vector(23 downto 0);
-    seed      : in std_logic_vector(23 downto 0);   -- q6.17
-    root      : out std_logic_vector(23 downto 0);  -- 11.12
-    set_port  : out std_logic); 
+    clk_port   : in std_logic; 
+    load_port  : in std_logic; 
+    reset_port : in std_logic;
+    mantissa   : in std_logic_vector(23 downto 0); 
+    seed       : in std_logic_vector(23 downto 0);   -- q6.17
+    root       : out std_logic_vector(23 downto 0);  -- 11.12
+    set_port   : out std_logic); 
 end component newton_24b;
 ----------------------- declarations -------------------------------------
 -- state declarations 
@@ -62,6 +64,7 @@ end component newton_24b;
 -- signals for newtons method 
   signal mantissa      : std_logic_vector(23 downto 0) := (others => '0');
   signal newton_seed   : std_logic_vector(23 downto 0) := (others => '0');
+  signal bufr_seed     : std_logic_vector(23 downto 0) := (others => '0');
   signal root          : std_logic_vector(23 downto 0) := (others => '0');
 
 -- ensure numeric stability
@@ -133,21 +136,25 @@ end process get_norm;
 --------------------------------------------------------------------------
 read_seed: newton_lut 
   port map(
-    clk_port => clk_port, 
-    addr     => addr, 
-    seed     => fetched_seed, 
-    set_port => OPEN);
+    clk_port   => clk_port,
+    reset_port => reset_port, 
+    addr       => addr, 
+    seed       => fetched_seed, 
+    set_port   => OPEN);
 
 -- constantly address, will only be correct once 
 addr <= std_logic_vector(norm(21 downto 12));
 
+
+
 get_seed: process( clk_port )
 begin 
   if rising_edge( clk_port ) then
+    bufr_seed <= fetched_seed;  
     if reset_en = '1' then 
       newton_seed <= (others => '0');
     elsif seed_en = '1' then  
-      newton_seed <= fetched_seed; 
+      newton_seed <= bufr_seed; 
     end if; 
   end if;
 end process get_seed; 
@@ -157,12 +164,13 @@ end process get_seed;
 --------------------------------------------------------------------------
 get_reciprocal: newton_24b
  port map(
-    clk_port => clk_port,
-    en_port  => newton_en,
-    mantissa => mantissa,
-    seed     => newton_seed,
-    root     => root,
-    set_port => newton_set
+    clk_port   => clk_port,
+    load_port  => newton_en,
+    reset_port => reset_port, 
+    mantissa   => mantissa,
+    seed       => newton_seed,
+    root       => root,
+    set_port   => newton_set
 );
 
 mantissa <= std_logic_vector(norm);
@@ -170,8 +178,7 @@ mantissa <= std_logic_vector(norm);
 --------------------------------------------------------------------------
 -- Interface Outputs 
 --------------------------------------------------------------------------
-set_port <= '1' when set_en = '1' else 
-            '0'; 
+set_port <= '1' when set_en = '1' else '0'; 
 
 set_reciprocal: process( clk_port )
   variable invert_helper : signed(23 downto 0) := (others => '0');
@@ -216,21 +223,22 @@ begin
         if newton_set = '1' then  
           next_state <= done; 
         end if; 
+      when done => 
+        next_state <= idle; 
       when others => 
         null;                     -- no reset & done means we stay done  
     end case; 
   end if; 
 end process next_state_logic; 
 
-update_state: process( clk_port )
-begin 
-  if rising_edge( clk_port ) then 
-    current_state <= next_state; 
-  end if; 
-end process update_state; 
-
 output_logic: process( current_state )
 begin 
+  reset_en <= '0';
+  load_en <= '0'; 
+  normalize_en <= '0';
+  newton_en <= '0';
+  seed_en <= '0';
+  set_en <= '0';
   case ( current_state ) is 
     when idle => 
       reset_en <= '1'; 
@@ -248,5 +256,12 @@ begin
       null;
   end case; 
 end process output_logic; 
+
+update_state: process( clk_port )
+begin 
+  if rising_edge( clk_port ) then 
+    current_state <= next_state; 
+  end if; 
+end process update_state; 
 
 end architecture behavioral;

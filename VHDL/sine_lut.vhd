@@ -535,6 +535,7 @@ signal idx          : integer := 1;
 begin
 
 angle <= signed(rads);
+-- CORDIC algorithm to get reciprocal of angle (1/rads) 
 phase <= shift_left((angle + (shift_right(angle, 2) + shift_right(angle, 5) - shift_right(angle, 7))), 1);
 
 -- handle cosine internally by adding turns to phase (specific to 2048 value table)  

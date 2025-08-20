@@ -54,15 +54,20 @@ begin
   value <= x"001000"; -- 1.0 
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect x000800
+  reset_port <= '1';
   reset_port <= '1';
   wait for 2*clk_period; 
   value <= x"002000"; -- 2.0 
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect x0002E9
   reset_port <= '1';
@@ -70,7 +75,9 @@ begin
   value <= x"005800"; -- 5.5 
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect x000141
   reset_port <= '1';
@@ -78,7 +85,9 @@ begin
   value <= x"00CC00"; -- 12.75
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect x000029
   reset_port <= '1';
@@ -86,7 +95,9 @@ begin
   value <= x"063E66"; -- 99.9
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect x0013FB0
   reset_port <= '1';
@@ -94,7 +105,9 @@ begin
   value <= x"0000CD"; -- 0.05
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect FFE000
   reset_port <= '1';
@@ -102,7 +115,9 @@ begin
   value <= x"FFF800"; -- -0.5 
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect FFFE70
   reset_port <= '1';
@@ -110,7 +125,9 @@ begin
   value <= x"FF5C00"; -- -10.25
   reset_port <= '0';
   load_port  <= '1'; 
-  wait for 12*clk_period;
+  wait for clk_period;
+  load_port  <= '0';
+  wait for 16*clk_period;
 
   -- expect FFFFD7
   reset_port <= '1';
@@ -118,6 +135,8 @@ begin
   value <= x"F9C000"; -- -100.0
   reset_port <= '0';
   load_port  <= '1'; 
+  wait for clk_period;
+  load_port  <= '0';
   wait; 
 end process stim_proc; 
 

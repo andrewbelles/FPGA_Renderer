@@ -6,7 +6,7 @@ use work.array_types.all;
 entity newton_24b is 
   port (
     clk_port   : in std_logic; 
-    en_port    : in std_logic; 
+    load_port  : in std_logic; 
     reset_port : in std_logic;
     mantissa   : in std_logic_vector(23 downto 0); 
     seed       : in std_logic_vector(23 downto 0);   -- q6.17
@@ -27,88 +27,144 @@ component multiplier_24x24
     AB         : out std_logic_vector(23 downto 0);
     AB_dig     : out std_logic_vector(4 downto 0);
     set_port   : out std_logic); 
-end multiplier_24x24; 
-  type state_type is ( reset, run, done ); 
+end component multiplier_24x24; 
+----------------------- declarations -------------------------------------
+-- state declarations 
+  type state_type is ( idle, prod1, prod2, done ); 
+  signal current_state, next_state : state_type := idle;
 
-  signal current_state, next_state : state_type := reset; 
+-- enables 
+  signal reset_en      : std_logic := '0';
+  signal set_en        : std_logic := '0';
+  signal mul_en        : std_logic := '0';
+  signal first_mul_en  : std_logic := '0';
+  signal second_mul_en : std_logic := '0';
 
-  signal reset_en   : std_logic := '0';
+-- auxilliary signals 
+  signal mul_set       : std_logic := '0'; 
+  signal clear_mul     : std_logic := '0';
 
-  signal inner_set  : std_logic := '0'; 
-  signal outer_set  : std_logic := '0';
-  signal outer_en   : std_logic := '0';
+-- signals for multiplication 
+  signal A, B          : std_logic_vector(23 downto 0) := (others => '0'); 
+  signal A_dig, B_dig  : std_logic_vector(4 downto 0) := (others => '0'); 
+  signal AB            : std_logic_vector(23 downto 0) := (others => '0');
+  signal diff, sRoot   : signed(23 downto 0) := (others => '0');
 
-  signal x          : signed_3x24_t := (others => (others => '0'));
-
-  signal counter    : unsigned(1 downto 0) := (others => '0');
-  signal counter_tc : std_logic := '0';
-  signal idx        : integer   := 0;
-  signal decimals   : std_logic_vector(4 downto 0) := (others => '0'); 
-
-  signal prod       : signed(23 downto 0)  := (others => '0');
-  signal diff       : signed(23 downto 0)  := (others => '0');
-  
--- constant digit counts 
-  constant m22      : std_logic_vector(4 downto 0) := "10110";
-  constant s17      : std_logic_vector(4 downto 0) := "10001";
-  constant s12      : std_logic_vector(4 downto 0) := "01100";
-  constant c2_17    : signed(23 downto 0)          := x"002000";
+-- 2 represented as a 11.12 fixed point value 
+  constant two_1112    : signed(23 downto 0) := x"002000";
 begin 
 
--- dec count is 17 or b10001
-x(0) <= signed(seed);
-
-inner_prod: multiplier_24x24
+--------------------------------------------------------------------------
+-- Call to multiplier  
+--------------------------------------------------------------------------
+multiply: multiplier_24x24
  port map(
     clk_port   => clk_port,
-    load_port  => en_port,
-    reset_port => reset_en, 
-    A          => mantissa,
-    B          => std_logic_vector(x(idx)),
-    A_dig      => m22,
-    B_dig      => s17,
-    AB         => std_logic_vector(prod), -- 11.12
-    AB_dig     => decimals,
-    set_port   => inner_set 
-);
+    load_port  => mul_en,
+    reset_port => clear_mul, 
+    A          => A,
+    B          => B,
+    A_dig      => A_dig,
+    B_dig      => B_dig,
+    AB         => AB, -- 11.12
+    AB_dig     => OPEN,
+    set_port   => mul_set);
 
-diff <= (c2_17 - prod); 
-outer_en <= '1' when inner_set = '1' else 
-            '0';
+-- set as flopped output values 
+root     <= std_logic_vector(sRoot);
+set_port <= set_en; 
 
-outer_prod: multiplier_24x24
- port map(
-    clk_port   => clk_port,
-    load_port  => outer_en,
-    reset_port => reset_en,
-    A          => std_logic_vector(diff),
-    B          => std_logic_vector(x(idx)),
-    A_dig      => s12,
-    B_dig      => s17,
-    AB         => std_logic_vector(prod), -- 11.12
-    AB_dig     => decimals,
-    set_port   => outer_set
-);
+--------------------------------------------------------------------------
+-- Select proper operands for multiplication (Async) 
+--------------------------------------------------------------------------
+A <= mantissa               when first_mul_en = '1' else 
+     std_logic_vector(diff) when second_mul_en = '1' else 
+     (others => '0'); 
+A_dig <= "10110" when first_mul_en = '1' else 
+         "01100" when second_mul_en = '1' else 
+         "00000";
+B     <= seed; 
+B_dig <= "10001";
 
-counter_tc <= '1' when counter = 2 else 
-              '0';
-x(idx + 1) <= shift_left(prod, to_integer(17 - signed(decimals)));
-
-inc_iter: process( clk_port )
+--------------------------------------------------------------------------
+-- Set intermediate and final values in memory 
+--------------------------------------------------------------------------
+set_prods: process( clk_port )
+  variable prod_helper : signed(23 downto 0) := (others => '0');
 begin 
+  prod_helper := (others => '0');
+  clear_mul <= '0';
+
   if rising_edge( clk_port ) then 
-    if reset_port = '1' then 
-      counter <= "00";
-    elsif outer_set = '1' then 
-      if counter_tc = '0' then 
-        counter <= counter + 1; 
-      end if;
+    prod_helper := signed(AB);
+    if reset_en = '1' then 
+      diff <= (others => '0');
+      sRoot <= (others => '0');
+
+    elsif mul_set = '1' then 
+      -- safe to clear now 
+      clear_mul <= '1';
+      if first_mul_en = '1' then 
+        diff <= two_1112 - prod_helper;
+
+      elsif second_mul_en = '1' then 
+        sRoot <= prod_helper;
+      end if; 
     end if; 
   end if; 
-end process inc_iter; 
+end process set_prods; 
 
-idx  <= to_integer(counter);
-root <= std_logic_vector(x(3));
+--------------------------------------------------------------------------
+-- FSM Logic 
+--------------------------------------------------------------------------
+next_state_logic: process( current_state, reset_port, load_port, mul_set )
+begin 
+  if reset_port = '1' then 
+    next_state <= idle; 
+  else 
+    case ( current_state ) is
+      when idle => 
+        next_state <= idle; 
+        if load_port = '1' then 
+          next_state <= prod1; 
+        end if; 
+      when prod1 => 
+        next_state <= prod1; 
+        if mul_set = '1' then 
+          next_state <= prod2; 
+        end if; 
+      when prod2 => 
+        next_state <= prod2; 
+        if mul_set = '1' then 
+          next_state <= done; 
+        end if; 
+      when done => 
+        next_state <= done; 
+    end case; 
+  end if; 
+end process next_state_logic; 
+
+output_logic: process( current_state )
+begin 
+  reset_en      <= '0';
+  first_mul_en  <= '0';
+  second_mul_en <= '0';
+  mul_en        <= '0';
+  set_en        <= '0';
+
+  case ( current_state ) is 
+    when idle => 
+      reset_en <= '1'; 
+    when prod1 => 
+      first_mul_en <= '1';
+      mul_en   <= '1';
+    when prod2 =>
+      second_mul_en <= '1';
+      mul_en   <= '1';
+    when done => 
+      set_en   <= '1';
+  end case; 
+end process output_logic; 
 
 update_state: process( clk_port )
 begin 
@@ -116,48 +172,5 @@ begin
     current_state <= next_state; 
   end if; 
 end process update_state; 
-
-next_state_logic: process( current_state, reset_port, outer_set, counter_tc )
-begin 
-  if reset_port = '1' then 
-    next_state <= reset; 
-  else 
-    case ( current_state ) is 
-      when reset => 
-        next_state <= run;
-      when run =>
-        next_state <= run;
-        if counter_tc = '1' then 
-          next_state <= done; 
-        elsif outer_set = '1' then 
-          next_state <= reset; 
-        end if; 
-      when done => 
-        next_state <= done;
-        if reset_port = '1' then 
-          next_state <= reset; 
-        end if; 
-      when others => 
-        null; 
-    end case; 
-  end if; 
-end process next_state_logic; 
-
-output_logic: process( current_state )
-begin 
-  case ( current_state ) is 
-    when reset => 
-      reset_en <= '1';
-      set_port <= '0';
-    when run => 
-      reset_en <= '0';
-      set_port <= '0';
-    when done => 
-      reset_en <= '0';
-      set_port <= '1';
-    when others => 
-      null; 
-  end case; 
-end process output_logic; 
 
 end architecture behavioral;
