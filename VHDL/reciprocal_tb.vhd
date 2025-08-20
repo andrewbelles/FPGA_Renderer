@@ -56,7 +56,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect x000800
   reset_port <= '1';
@@ -67,7 +67,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect x0002E9
   reset_port <= '1';
@@ -77,7 +77,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect x000141
   reset_port <= '1';
@@ -87,7 +87,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect x000029
   reset_port <= '1';
@@ -97,7 +97,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect x0013FB0
   reset_port <= '1';
@@ -107,7 +107,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect FFE000
   reset_port <= '1';
@@ -117,7 +117,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect FFFE70
   reset_port <= '1';
@@ -127,7 +127,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 22*clk_period;
+  wait for 36*clk_period;
 
   -- expect FFFFD7
   reset_port <= '1';

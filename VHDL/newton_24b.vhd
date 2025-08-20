@@ -30,7 +30,7 @@ component multiplier_24x24
 end component multiplier_24x24; 
 ----------------------- declarations -------------------------------------
 -- state declarations 
-  type state_type is ( idle, prod1, bufr, prod2, done ); 
+  type state_type is ( idle, bufr1, prod1, bufr2, prod2, done ); 
   signal current_state, next_state : state_type := idle;
 
 -- enables 
@@ -43,6 +43,7 @@ end component multiplier_24x24;
 -- auxilliary signals 
   signal mul_set       : std_logic := '0'; 
   signal clear_mul     : std_logic := '0';
+  signal iteration     : integer := 0; 
 
 -- signals for multiplication 
   signal A, B          : std_logic_vector(23 downto 0) := (others => '0'); 
@@ -79,13 +80,22 @@ set_port <= set_en;
 --------------------------------------------------------------------------
 -- Select proper operands for multiplication (Async) 
 --------------------------------------------------------------------------
-A <= mantissa               when first_mul_en = '1' else 
-     std_logic_vector(diff) when second_mul_en = '1' else 
-     (others => '0'); 
+set_B: process( iteration, seed, sRoot )
+begin 
+  if iteration = 0 then 
+    B <= seed;  
+  else 
+    B <= std_logic_vector(shift_left(sRoot, 5));
+  end if; 
+end process set_B;
+
+A     <= mantissa               when first_mul_en = '1' else 
+         std_logic_vector(diff) when second_mul_en = '1' else
+         (others => '0');
+
 A_dig <= "10110" when first_mul_en = '1' else 
          "01100" when second_mul_en = '1' else 
          "00000";
-B     <= seed; 
 B_dig <= "10001";
 
 --------------------------------------------------------------------------
@@ -98,6 +108,7 @@ begin
 
   if rising_edge( clk_port ) then 
     if reset_en = '1' then 
+      iteration <= 0; 
       diff <= (others => '0');
       sRoot <= (others => '0');
 
@@ -107,6 +118,8 @@ begin
         diff <= two_1112 - prod_helper;
 
       elsif second_mul_en = '1' then 
+        -- increment iteration 
+        iteration <= iteration + 1; 
         sRoot <= prod_helper;
       end if; 
     end if; 
@@ -116,7 +129,7 @@ end process set_prods;
 --------------------------------------------------------------------------
 -- FSM Logic 
 --------------------------------------------------------------------------
-next_state_logic: process( current_state, reset_port, load_port, mul_set )
+next_state_logic: process( current_state, reset_port, load_port, mul_set, iteration )
 begin 
   if reset_port = '1' then 
     next_state <= idle; 
@@ -125,15 +138,21 @@ begin
       when idle => 
         next_state <= idle; 
         if load_port = '1' then 
-          next_state <= prod1; 
+          next_state <= bufr1; 
+        end if; 
+      when bufr1 => 
+        next_state <= bufr1; 
+        -- mul set must go low from clear before proceeding 
+        if mul_set = '0' then 
+          next_state <= prod1;
         end if; 
       when prod1 => 
         next_state <= prod1; 
         if mul_set = '1' then 
-          next_state <= bufr; 
+          next_state <= bufr2; 
         end if; 
-      when bufr => 
-        next_state <= bufr; 
+      when bufr2 => 
+        next_state <= bufr2; 
         -- mul set must go low from clear before proceeding 
         if mul_set = '0' then 
           next_state <= prod2;
@@ -141,7 +160,11 @@ begin
       when prod2 => 
         next_state <= prod2; 
         if mul_set = '1' then 
-          next_state <= done; 
+          if iteration = 1 then 
+            next_state <= done; 
+          else 
+            next_state <= bufr1; 
+          end if; 
         end if; 
       when done => 
         next_state <= done; 
@@ -160,11 +183,13 @@ begin
 
   case ( current_state ) is 
     when idle => 
-      reset_en <= '1'; 
+      reset_en <= '1';
+    when bufr1 => 
+      clear_mul <= '1';
     when prod1 => 
       first_mul_en <= '1';
       mul_en   <= '1';
-    when bufr => 
+    when bufr2 => 
       clear_mul <= '1';
     when prod2 =>
       second_mul_en <= '1';
