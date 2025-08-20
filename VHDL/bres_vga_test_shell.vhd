@@ -49,10 +49,8 @@ end component;
 
 component framebuffer is
       Port (clk                 :   in std_logic;
-          reset               :   in std_logic;
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- addess to write
           write_en            :   in std_logic;
-          buffer_write_sel    :   in std_logic;
           read_x, read_y      :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
@@ -61,7 +59,11 @@ component framebuffer is
         
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
-          VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data
+          VGA_out             :   out std_logic_vector(11 downto 0); -- framebuffer data
+          
+          clear_fulfilled : out std_logic;
+          clear_request : in std_logic;
+          tet_drawn : in std_logic
            );
 end component;
 
@@ -69,7 +71,9 @@ component graphics_manager is
     Port (clk                  :       in std_logic;
       new_vertices         :       in  std_logic; -- from central controller, signals there are new verticies ready
       vertices             :       in  array_4x16_t;
-      buffer_write_sel     :       out std_logic;
+      clear_request        :       out std_logic;
+      clear_fulfilled      :       in std_logic;
+      tet_drawn :      out std_logic;
       load_mem             :       out std_logic;
       x, y                 :       out std_logic_vector(7 downto 0)
        );
@@ -87,7 +91,7 @@ signal dummy_reset: std_logic;
 signal dummy_nv : std_logic;
 signal dummy_vertices : array_4x16_t;
 
-
+signal clear_fulfilled, clear_request, tet_drawn : std_logic;
 -- signals
 signal pulse_done : std_logic := '0';
 signal pulse_counter : unsigned(7 downto 0) := (others => '0'); -- adjust width as needed
@@ -108,17 +112,20 @@ controller : vga_controller
         pixel_y => pixel_y);
 datapath : framebuffer
     Port Map(clk => clk_ext_port,
-          reset => dummy_reset,
-          write_x => write_x ,
+          write_x => write_x,
           write_y => write_y,
           write_en => write_en,
-          buffer_write_sel => buffer_write_sel,
           -- give framebuffer the delayed pixel_x and pixel_y because BRAM read takes 2 cycles
           read_x => pixel_x,
           read_y => pixel_y,
           video_on => video_on,
           HS_in => HS_sig, 
           VS_in => VS_sig,
+          
+          tet_drawn => tet_drawn,
+          clear_request => clear_request,
+          clear_fulfilled => clear_fulfilled,
+        
         
           VGA_HS => HS, -- final VS/HS
           VGA_VS => VS,
@@ -128,7 +135,9 @@ manager : graphics_manager
     clk => clk_ext_port,
     new_vertices => dummy_nv,
     vertices => dummy_vertices,
-    buffer_write_sel => buffer_write_sel,
+    clear_request => clear_request,
+    clear_fulfilled => clear_fulfilled,
+    tet_drawn => tet_drawn,
     load_mem => write_en,
     x => write_x,
     y => write_y

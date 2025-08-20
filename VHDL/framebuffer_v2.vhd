@@ -25,18 +25,19 @@ use IEEE.NUMERIC_STD.ALL;
 use work.array_types.all;
 entity framebuffer is
     Port (clk                 :   in std_logic;
-          reset               :   in std_logic;
+          clear_request          :   in std_logic; -- tells framebuffer to clear back 
+          tet_drawn       :   in std_logic; -- tells framebuffer bres is complete
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- address to write
           
           -- Needs to have a data in line
           write_en            :   in std_logic;
-          buffer_write_sel    :   in std_logic;
           read_x, read_y      :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
           VS_in               :   in std_logic;
         
+          clear_fulfilled        :   out std_logic; -- tells manager back is cleared
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
           VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 8 bit for an 8 bit color
@@ -66,8 +67,11 @@ signal buff1_addr : std_logic_vector(15 downto 0);
 signal buff0_wea  : std_logic_vector(0 downto 0);
 signal buff1_wea  : std_logic_vector(0 downto 0);
 
-signal write_data : std_logic_vector(0 downto 0) := (others => '1'); -- data to write.
+signal write_data : std_logic_vector(0 downto 0) := (others => '0'); -- data to write.
 
+
+-- buffer select
+signal front_buff : std_logic := '0'; -- says which buffer is currently drawing to screen
 -- buffer outputs
 signal buff0_output : std_logic_vector(0 downto 0);
 signal buff1_output : std_logic_vector(0 downto 0);
@@ -78,10 +82,31 @@ signal VGA_out_en : std_logic_vector(1 downto 0) := (others => '0');
 
 -- signals to hold delayed value of video_on, etc (because read introduces a 1 cycle delay)
 
+
 signal video_on_delayed : std_logic_vector(1 downto 0);
 signal HS_delayed       : std_logic_vector(1 downto 0);
 signal VS_delayed       : std_logic_vector(1 downto 0);
 
+signal read_addr_delayed : std_logic_vector(31 downto 0) := (others => '0');
+signal clear_addr    : unsigned(15 downto 0) := (others => '0');
+
+-- fsm signals
+type state is (IDLE, CB, CLEARED, RECEIVE, WAITING, SWAP);
+signal current_state, next_state : state := IDLE;
+
+signal clear_tc : std_logic; -- from logic to fsm to say that the local clear of back is at addr 2^16-1 (it is finished)
+signal blanking : std_logic; -- from logic to fsm to say that we are in a blanking region
+
+signal start_clear : std_logic; -- from fsm to clearing logic says to start clearing memory
+signal receiving : std_logic; -- -- from fsm to logic to say that we are receiving and writing to memory
+signal am_waiting   : std_logic; -- from fsm to logic to say that we are waiting for blanking region
+signal go_swap         : std_logic; -- from fsm to logic to say to swap which one is drawing to vga
+
+
+
+-- debug
+
+signal read_addr_delayed_sg : std_logic_vector(15 downto 0);
 begin
 buff0 : blk_mem_gen_0
   PORT MAP (
@@ -104,36 +129,6 @@ buff0 : blk_mem_gen_0
   );
   
   
-  
-
-  -- glue logic to set which BRAM gets the write address and which gets the read address
-  addr_logic : process(buffer_write_sel, write_addr, read_addr)
-      begin
-      if(buffer_write_sel = '0') then
-        buff0_addr <= write_addr;
-        buff1_addr <= read_addr;
-      elsif(buffer_write_sel = '1') then
-        buff0_addr <= read_addr;
-        buff1_addr <= write_addr;
-      end if;
-  end process;
-  
-  -- glue logic to set which BRAM has its write enable asserted
-wea_logic : process(buffer_write_sel, write_en)
-begin
-    -- default: disable both
-    buff0_wea(0) <= '0';
-    buff1_wea(0) <= '0';
-
-    -- enable write to the selected buffer only if write_en is high
-    if (write_en = '1') then
-        if (buffer_write_sel = '0') then
-            buff0_wea(0) <= '1';
-        elsif(buffer_write_sel = '1') then
-            buff1_wea(0) <= '1';
-        end if;
-    end if;
-end process;
 
 
 -- process sets VGA_out_sg by setting it to all 1s or all 0s
@@ -141,29 +136,26 @@ end process;
 -- uses that BRAM's output port as its data
 -- FOR NOW: Just doing black or white (all 0s or all 1s). May add functionality in future 
 
-process(clk)
+process(read_x, read_y, front_buff, buff0_output, buff1_output)
 begin
-   if(rising_edge(clk)) then
-       if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
-        unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
-            if(buffer_write_sel = '1') then -- if writing to buffer 1, read from buffer 0
-                if(buff0_output(0) = '1') then
-                   
-                    VGA_out_sg <= (others => '1');
-                else 
-                    VGA_out_sg <= (others => '0');
-                end if;
-            elsif(buffer_write_sel = '0') then -- if writing to buffer 0, read from buffer 1
-                if(buff1_output(0) = '1') then
-                    VGA_out_sg <= (others => '1');
-                else 
-                    VGA_out_sg <= (others => '0');
-                end if;
+   if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
+    unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
+        if(front_buff = '0') then -- if writing to buffer 1, read from buffer 0
+            if(buff0_output(0) = '1') then
+                VGA_out_sg <= (others => '1');
+            else 
+                VGA_out_sg <= (others => '0');
             end if;
-        else 
-            VGA_out_sg <= (others => '0'); -- if not in center of screen, just print black
+        elsif(front_buff = '1') then -- if writing to buffer 0, read from buffer 1
+            if(buff1_output(0) = '1') then
+                VGA_out_sg <= (others => '1');
+            else 
+                VGA_out_sg <= (others => '0');
+            end if;
         end if;
-   end if; 
+    else 
+        VGA_out_sg <= (others => '0'); -- if not in center of screen, just print black
+    end if;
 end process;
   
 
@@ -180,8 +172,41 @@ begin
         
         VS_delayed(0) <= VS_in;
         VS_delayed(1) <= VS_delayed(0);
+        
+        read_addr_delayed(15 downto 0) <= read_addr;
+        read_addr_delayed(31 downto 16) <= read_addr_delayed(15 downto 0);
     end if;
 end process;
+
+
+
+-- Clear entire memory by looping over it and setting to 0. Takes in signal from fsm called start_clear
+clrmem : process(clk)
+begin
+    if(rising_edge(clk)) then
+        if(start_clear = '1') then
+            if(clear_tc = '0') then
+                clear_addr <= clear_addr + 1;
+            else
+                clear_addr <= (others => '0');
+            end if;
+        end if;
+    end if;
+end process;
+
+clear_tc <= '1' when clear_addr = 65535 else '0';
+
+
+ -- enable write on start clear high, select whcih one to write to
+buff1_wea(0) <= '1' when ((start_clear = '1' OR receiving = '1') and front_buff = '0')  else '0';
+buff0_wea(0) <= '1' when ((start_clear = '1' OR receiving = '1') and front_buff = '1')  else '0';
+
+
+
+
+-- NEED ASYNCHRONOUS LOGIC TO LINK UP THE CORRECT ADDRESS
+-- when start_clear = 1, need to have address linked to clear_counter
+-- write a 1 to memory @ write_x and write_y
 
 -- asynchronously computes write address 
 -- address is y*256+x which can be done by shifting y left 8 times, or with x
@@ -194,7 +219,7 @@ write_addr <= std_logic_vector(
 raddr: process(read_x, read_y)
 begin
     -- in center 256x256 window of screen
-    if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
+    if (unsigned(read_x) >= 191 and unsigned(read_x) < 447 and -- start reading 1 25MHz cycle early
         unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
 
         -- offsets the read_x and read_y so that (192,112) is (0,0) address in the buffer.
@@ -202,7 +227,7 @@ begin
         -- finally, as with write address, shifts y left by 8 (*256), then adds x
         read_addr <= std_logic_vector(
                 resize(unsigned(read_y) - to_unsigned(112,10),8) & 
-                resize(unsigned(read_x) - to_unsigned(192,10),8)
+                resize(unsigned(read_x) - to_unsigned(191,10),8) -- +1 makes it read the 192 address at 191, will be pipelined into the ram
             ); 
 
     else
@@ -210,10 +235,123 @@ begin
     end if;
 end process;
 
+-- connects up the addresses for the BRAMs
+  addr_logic : process(front_buff, read_addr, write_addr, start_clear, clear_addr)
+      begin
+       -- safe defaults
+        buff0_addr <= (others => '0');
+        buff1_addr <= (others => '0');
+
+        if(front_buff = '0') then -- read 0, write to 1
+            -- write address
+            if(start_clear = '1') then
+                buff1_addr <= std_logic_vector(clear_addr);
+            else -- receivigng?
+                buff1_addr <= write_addr;
+            end if;
+            
+            -- read addres
+            buff0_addr <= read_addr_delayed(31 downto 16); -- delayed by 2 100MHz cycles after being sped up by 1 25MHz cycle
+        
+        elsif(front_buff = '1') then -- read 1, write to 0
+            -- write address
+            if(start_clear = '1') then
+                buff0_addr <= std_logic_vector(clear_addr);
+            else
+                buff0_addr <= write_addr;
+            end if;
+            
+            -- read address
+            buff1_addr <= read_addr_delayed(31 downto 16);
+        end if;
+  end process;
+
+
+-- swap
+
+swapproc : process(clk)
+begin
+    if(rising_edge(clk)) then
+        if(go_swap = '1') then
+            front_buff <= NOT front_buff;
+        end if;
+    end if;
+end process;
+
+-- detects blanking region by simply asserting signal blanking when read_x and read_y are outside of 256x256 region in center of screen
+blanking <= '1' when VS_in = '0' else '1';
+
+
+-- FSM for writing to back buffer
+state_update : process(clk) 
+begin
+    if(rising_edge(clk)) then
+        current_state <= next_state;
+    end if;
+end process;
+
+ns_logic : process(current_state, clear_request, clear_tc, tet_drawn, blanking)
+begin
+    next_state <= current_state;
+    case current_state is
+        when IDLE =>
+            if(clear_request = '1') then
+                next_state <= CB;
+            end if;
+        when CB =>
+            if(clear_tc = '1') then
+                next_state <= CLEARED;
+            end if;
+        when CLEARED =>
+            next_state <= RECEIVE;
+        when RECEIVE => 
+            if(tet_drawn = '1') then -- done receiving when bres_complete
+                next_state <= WAITING;
+            end if;
+        when WAITING =>
+            if(blanking = '1') then
+                next_state <= SWAP;
+            end if;
+        when SWAP => 
+            next_state <= IDLE;
+        when others =>
+            next_state <= IDLE;
+    end case;
+end process;
+
+output_logic : process(current_state)
+begin
+    start_clear <= '0';
+    clear_fulfilled <= '0';
+    receiving <= '0';
+    am_waiting <= '0';
+    go_swap <= '0';
+    case current_state is
+        when CB =>
+            start_clear <= '1'; -- to clearing logic (local)
+        when CLEARED =>
+            clear_fulfilled <= '1'; -- to graphics manager
+        when RECEIVE =>
+            receiving <= '1';
+        when WAITING =>
+            am_waiting <= '1';
+        when SWAP =>
+            go_swap <= '1';
+        when others =>
+            null;
+    end case;
+end process;
+
+
 -- takes signal from MSB of shift register (2 cycle delay)
 VGA_out <= VGA_out_sg when video_on_delayed(1) = '1' else (others => '0'); -- only display when video is on
 VGA_HS <= HS_delayed(1);
 VGA_VS <= VS_delayed(1);
+
+
+write_data(0) <= '0' when start_clear = '1' else '1';
+-- debug
+read_addr_delayed_sg <= read_addr_delayed(31 downto 16);
 
 
 end Behavioral;

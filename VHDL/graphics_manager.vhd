@@ -30,7 +30,10 @@ entity graphics_manager is
 Port (clk                  :       in std_logic;
       new_vertices         :       in  std_logic; -- from central controller, signals there are new vertices ready
       vertices             :       in  array_4x16_t;
-      buffer_write_sel     :       out std_logic;
+      clear_fulfilled         :       in std_logic;
+      
+      clear_request           :       out std_logic; -- control signal to tell framebuffer to clear back
+      tet_drawn   :       out std_logic; -- control signal to tell framebuffer bres is finished
       load_mem             :       out std_logic;
       x, y                 :       out std_logic_vector(7 downto 0)
        );
@@ -50,7 +53,6 @@ signal load_new_pts : std_logic := '0';
 --
 -- Buffer writing
 signal load_mem_sg : std_logic := '0';
-signal buffer_write_sel_sg  : std_logic := '0'; -- holds which buffer is active for framebuffer module to write to
 signal flip_buffer : std_logic := '0'; -- signal from FSM to flip buffer
 
 -- bresenham signals
@@ -59,9 +61,9 @@ signal x0_bres, y0_bres, x1_bres, y1_bres, x_bres, y_bres         : std_logic_ve
 
 
 
-type state is (IDLE, ACTIVATE, COMPUTE, INC, DRAW);
+type state is (IDLE, CB, ACTIVATE, COMPUTE, INC, DONE);
 signal current_state, next_state : state := IDLE;
-
+signal tet_drawn_sg : std_logic;
 component bresenham is
     Port (clk, reset        :   in std_logic;
           start             :   in std_logic;
@@ -105,15 +107,16 @@ begin
     end if;
 end process;
 
--- register for which buffer the framebuffer module should write to
-buffer_proc : process(clk)
-begin
-    if(rising_edge(clk)) then
-        if(flip_buffer = '1') then
-            buffer_write_sel_sg <= NOT buffer_write_sel_sg; -- go to the other buffer
-        end if;
-    end if;
-end process;
+-- deleted -- cant just flip buffer right away
+---- register for which buffer the framebuffer module should write to
+--buffer_proc : process(clk)
+--begin
+--    if(rising_edge(clk)) then
+--        if(flip_buffer = '1') then
+--            buffer_write_sel_sg <= NOT buffer_write_sel_sg; -- go to the other buffer
+--        end if;
+--    end if;
+--end process;
 
 -- assign the x_points and y_points into array so that can easily access them by index
 load_pts: process(clk)
@@ -131,6 +134,7 @@ begin
         end if;
     end if;
  end process;      
+
 
 -- ASYNCHRONOUS 
 
@@ -205,12 +209,10 @@ end process;
 -- load_mem signal
 load_mem <= load_mem_sg;
 
--- buffer write select signal 
-buffer_write_sel <= buffer_write_sel_sg;
-
 -- counter terminal count
 counter_tc <= '1' when counter = 5 else '0';
 
+tet_drawn <= tet_drawn_sg;
 ------------------------------------------------------------------------------------------------------------------------------------
 -- FSM waits for new_vertices signal from central controller to assert. Then it activates bresenham 6 times, one
 -- for each of the 6 combinations of vertex endpoints. After running it 6 times, it flips which buffer is active 
@@ -222,12 +224,16 @@ begin
     end if;
 end process;
 
-ns_logic : process(current_state, counter_tc, plot_bres, new_vertices)
+ns_logic : process(current_state, clear_fulfilled, counter_tc, done_bres, plot_bres, new_vertices)
 begin
     next_state <= current_state;
     case current_state is
         when IDLE =>
             if(new_vertices = '1') then
+                next_state <= CB;
+            end if;
+        when CB =>
+            if(clear_fulfilled  = '1') then
                 next_state <= ACTIVATE;
             end if;
         when ACTIVATE =>
@@ -236,11 +242,11 @@ begin
             if(counter_tc = '0' and done_bres = '1') then
                 next_state <= INC;
             elsif(counter_tc = '1' and done_bres = '1') then
-                next_state <= DRAW;
+                next_state <= DONE;
             end if;
         when INC =>
             next_state <= ACTIVATE;
-        when DRAW =>
+        when DONE => 
             next_state <= IDLE;
         when others =>
             next_state <= IDLE;
@@ -251,21 +257,26 @@ output_logic : process(current_state)
 begin
     start_bres <= '0';
     reset_counter <= '0';
-    flip_buffer <= '0';
     inc_counter <= '0';
     load_new_pts <= '0';
+    clear_request <= '0';
+    tet_drawn_sg <= '0';
     case current_state is
         when IDLE =>
             reset_counter <= '1';
             load_new_pts <= '1';
+        when CB =>
+            clear_request <= '1';
         when ACTIVATE =>
             start_bres <= '1';
         when INC =>
             inc_counter <= '1';
-        when DRAW =>
-            flip_buffer <= '1';
+        when DONE =>
+            tet_drawn_sg <= '1';
         when others =>
             null;
     end case;
 end process;
+
+
 end Behavioral;
