@@ -76,10 +76,10 @@ stim_proc : process
 begin
     wait for PERIOD / 2 - 1 ns;
     -- test from (0,0) to (4,7)
-    --x0 <= (others => '0');
-   -- y0 <= (others => '0');
-  --  x1 <= "00000000111";
-  --  y1 <= "00000000100"; 
+    x0 <= x"20";
+    y0 <= x"f0";
+    x1 <= x"10";
+    y1 <= x"82"; 
     
   --  start <= '1';
    -- wait for PERIOD;
@@ -102,15 +102,14 @@ begin
    -- y1 <= "00111100000"; -- 480
     --start <= '1';
   --  wait for PERIOD;
-    start <= '0';
-    x0 <= "00000000000";
-    y0 <= "00000000000";
-    x1 <= "00010000000";
-    y1 <= "00010000000";
+--    x0 <= "00000000";
+--    y0 <= "00000000";
+--    x1 <= "10000000";
+--    y1 <= "10000000";
     
-    start <= '1';
-    wait for PERIOD;
-    start <= '0';
+--    start <= '1';
+--    wait for PERIOD;
+--    start <= '0';
     wait;
 end process stim_proc;
 

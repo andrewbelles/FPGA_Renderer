@@ -168,10 +168,13 @@ begin
     if(rising_edge(clk)) then
         video_on_delayed(0) <= video_on; -- cycle t
         video_on_delayed(1) <= video_on_delayed(0); -- cycle t+1
+
         HS_delayed(0) <= HS_in;
         HS_delayed(1) <= HS_delayed(0);
+        
         VS_delayed(0) <= VS_in;
         VS_delayed(1) <= VS_delayed(0);
+
     end if;
 end process;
 
