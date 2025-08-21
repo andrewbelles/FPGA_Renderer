@@ -87,7 +87,7 @@ signal video_on_delayed : std_logic_vector(1 downto 0);
 signal HS_delayed       : std_logic_vector(1 downto 0);
 signal VS_delayed       : std_logic_vector(1 downto 0);
 
-signal read_addr_delayed : std_logic_vector(31 downto 0) := (others => '0');
+signal read_addr_delayed : std_logic_vector(15 downto 0) := (others => '0');
 signal clear_addr    : unsigned(15 downto 0) := (others => '0');
 
 -- fsm signals
@@ -102,11 +102,11 @@ signal receiving : std_logic; -- -- from fsm to logic to say that we are receivi
 signal am_waiting   : std_logic; -- from fsm to logic to say that we are waiting for blanking region
 signal go_swap         : std_logic; -- from fsm to logic to say to swap which one is drawing to vga
 
-
+signal buff0_output_reg : std_logic_vector(0 downto 0);
+signal buff1_output_reg : std_logic_vector(0 downto 0);
 
 -- debug
 
-signal read_addr_delayed_sg : std_logic_vector(15 downto 0);
 begin
 buff0 : blk_mem_gen_0
   PORT MAP (
@@ -128,26 +128,32 @@ buff0 : blk_mem_gen_0
     douta => buff1_output
   );
   
-  
-
+-- store output in a register so that it is synchronized
+synchbuff: process(clk)
+begin
+    if(rising_edge(clk)) then
+        buff0_output_reg(0) <= buff0_output(0);
+        buff1_output_reg(0) <= buff1_output(0);
+    end if;
+end process;
 
 -- process sets VGA_out_sg by setting it to all 1s or all 0s
 -- chooses correct BRAM based on buffer_write_sel
 -- uses that BRAM's output port as its data
 -- FOR NOW: Just doing black or white (all 0s or all 1s). May add functionality in future 
 
-process(read_x, read_y, front_buff, buff0_output, buff1_output)
+process(read_x, read_y, front_buff, buff0_output_reg, buff1_output_reg)
 begin
    if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
     unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
         if(front_buff = '0') then -- if writing to buffer 1, read from buffer 0
-            if(buff0_output(0) = '1') then
+            if(buff0_output_reg(0) = '1') then
                 VGA_out_sg <= (others => '1');
             else 
                 VGA_out_sg <= (others => '0');
             end if;
         elsif(front_buff = '1') then -- if writing to buffer 0, read from buffer 1
-            if(buff1_output(0) = '1') then
+            if(buff1_output_reg(0) = '1') then
                 VGA_out_sg <= (others => '1');
             else 
                 VGA_out_sg <= (others => '0');
@@ -173,8 +179,7 @@ begin
         VS_delayed(0) <= VS_in;
         VS_delayed(1) <= VS_delayed(0);
         
-        read_addr_delayed(15 downto 0) <= read_addr;
-        read_addr_delayed(31 downto 16) <= read_addr_delayed(15 downto 0);
+        read_addr_delayed <= read_addr;
     end if;
 end process;
 
@@ -236,7 +241,7 @@ begin
 end process;
 
 -- connects up the addresses for the BRAMs
-  addr_logic : process(front_buff, read_addr, write_addr, start_clear, clear_addr)
+  addr_logic : process(front_buff, read_addr_delayed, write_addr, start_clear, clear_addr)
       begin
        -- safe defaults
         buff0_addr <= (others => '0');
@@ -251,8 +256,7 @@ end process;
             end if;
             
             -- read addres
-            buff0_addr <= read_addr_delayed(31 downto 16); -- delayed by 2 100MHz cycles after being sped up by 1 25MHz cycle
-        
+            buff0_addr <= read_addr_delayed; -- delayed by 2 100MHz cycles after being sped up by 1 25MHz cycle
         elsif(front_buff = '1') then -- read 1, write to 0
             -- write address
             if(start_clear = '1') then
@@ -262,7 +266,8 @@ end process;
             end if;
             
             -- read address
-            buff1_addr <= read_addr_delayed(31 downto 16);
+            buff1_addr <= read_addr_delayed;
+
         end if;
   end process;
 
@@ -279,7 +284,7 @@ begin
 end process;
 
 -- detects blanking region by simply asserting signal blanking when read_x and read_y are outside of 256x256 region in center of screen
-blanking <= '1' when VS_in = '0' else '1';
+blanking <= '1' when VS_in = '0' else '0';
 
 
 -- FSM for writing to back buffer
@@ -350,8 +355,6 @@ VGA_VS <= VS_delayed(1);
 
 
 write_data(0) <= '0' when start_clear = '1' else '1';
--- debug
-read_addr_delayed_sg <= read_addr_delayed(31 downto 16);
 
 
 end Behavioral;
