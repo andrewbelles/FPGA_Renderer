@@ -31,7 +31,7 @@ entity framebuffer is
           
           -- Needs to have a data in line
           write_en            :   in std_logic;
-          read_x, read_y      :   in std_logic_vector(9 downto 0); -- address to read
+          pixel_x, pixel_y      :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
@@ -83,9 +83,9 @@ signal VGA_out_en : std_logic_vector(1 downto 0) := (others => '0');
 -- signals to hold delayed value of video_on, etc (because read introduces a 1 cycle delay)
 
 
-signal video_on_delayed : std_logic_vector(1 downto 0);
-signal HS_delayed       : std_logic_vector(1 downto 0);
-signal VS_delayed       : std_logic_vector(1 downto 0);
+signal video_on_delayed : std_logic_vector(3 downto 0);
+signal HS_delayed       : std_logic_vector(3 downto 0);
+signal VS_delayed       : std_logic_vector(3 downto 0);
 
 signal read_addr_delayed : std_logic_vector(15 downto 0) := (others => '0');
 signal clear_addr    : unsigned(15 downto 0) := (others => '0');
@@ -104,6 +104,9 @@ signal go_swap         : std_logic; -- from fsm to logic to say to swap which on
 
 signal buff0_output_reg : std_logic_vector(0 downto 0);
 signal buff1_output_reg : std_logic_vector(0 downto 0);
+
+signal pixel_x_delayed : std_logic_vector(39 downto 0);
+signal pixel_y_delayed : std_logic_vector(39 downto 0);
 
 -- debug
 
@@ -128,24 +131,17 @@ buff0 : blk_mem_gen_0
     douta => buff1_output
   );
   
--- store output in a register so that it is synchronized
-synchbuff: process(clk)
-begin
-    if(rising_edge(clk)) then
-        buff0_output_reg(0) <= buff0_output(0);
-        buff1_output_reg(0) <= buff1_output(0);
-    end if;
-end process;
+
 
 -- process sets VGA_out_sg by setting it to all 1s or all 0s
 -- chooses correct BRAM based on buffer_write_sel
 -- uses that BRAM's output port as its data
 -- FOR NOW: Just doing black or white (all 0s or all 1s). May add functionality in future 
 
-process(read_x, read_y, front_buff, buff0_output_reg, buff1_output_reg)
+process(pixel_x_delayed, pixel_y_delayed, front_buff, buff0_output_reg, buff1_output_reg)
 begin
-   if (unsigned(read_x) >= 192 and unsigned(read_x) < 448 and
-    unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
+   if (unsigned(pixel_x_delayed(39 downto 30)) >= 192 and unsigned(pixel_x_delayed(39 downto 30)) < 448 and
+    unsigned(pixel_y_delayed(39 downto 30)) >= 112 and unsigned(pixel_y_delayed(39 downto 30)) < 368) then
         if(front_buff = '0') then -- if writing to buffer 1, read from buffer 0
             if(buff0_output_reg(0) = '1') then
                 VGA_out_sg <= (others => '1');
@@ -170,16 +166,39 @@ end process;
 pipeline : process(clk)
 begin
     if(rising_edge(clk)) then
+        --delay video_on, HS, VS by 4 cycles
         video_on_delayed(0) <= video_on; -- cycle t
         video_on_delayed(1) <= video_on_delayed(0); -- cycle t+1
+        video_on_delayed(2) <= video_on_delayed(1); -- cycle t+1
+        video_on_delayed(3) <= video_on_delayed(2); -- cycle t+1
 
         HS_delayed(0) <= HS_in;
         HS_delayed(1) <= HS_delayed(0);
-        
+        HS_delayed(2) <= HS_delayed(1);
+        HS_delayed(3) <= HS_delayed(2);
+
         VS_delayed(0) <= VS_in;
         VS_delayed(1) <= VS_delayed(0);
+        VS_delayed(2) <= VS_delayed(1);
+        VS_delayed(3) <= VS_delayed(2);
         
+        -- add register at output of BRAM
+        buff0_output_reg(0) <= buff0_output(0);
+        buff1_output_reg(0) <= buff1_output(0);
+        
+        -- delay address by 1 clock cycle to bring address change onto edge of pixel change
         read_addr_delayed <= read_addr;
+        
+        pixel_x_delayed(9 downto 0) <= pixel_x;
+        pixel_x_delayed(19 downto 10) <= pixel_x_delayed(9 downto 0);
+        pixel_x_delayed(29 downto 20) <= pixel_x_delayed(19 downto 10);
+        pixel_x_delayed(39 downto 30) <= pixel_x_delayed(29 downto 20);
+
+        pixel_y_delayed(9 downto 0) <= pixel_y;
+        pixel_y_delayed(19 downto 10) <= pixel_y_delayed(9 downto 0);
+        pixel_y_delayed(29 downto 20) <= pixel_y_delayed(19 downto 10);
+        pixel_y_delayed(39 downto 30) <= pixel_y_delayed(29 downto 20);
+        
     end if;
 end process;
 
@@ -202,7 +221,7 @@ end process;
 clear_tc <= '1' when clear_addr = 65535 else '0';
 
 
- -- enable write on start clear high, select whcih one to write to
+ -- enable write on start clear high, select which one to write to
 buff1_wea(0) <= '1' when ((start_clear = '1' OR receiving = '1') and front_buff = '0')  else '0';
 buff0_wea(0) <= '1' when ((start_clear = '1' OR receiving = '1') and front_buff = '1')  else '0';
 
@@ -221,18 +240,18 @@ write_addr <= std_logic_vector(
         );
         
 -- process to find address to read
-raddr: process(read_x, read_y)
+raddr: process(pixel_x, pixel_y)
 begin
     -- in center 256x256 window of screen
-    if (unsigned(read_x) >= 191 and unsigned(read_x) < 447 and -- start reading 1 25MHz cycle early
-        unsigned(read_y) >= 112 and unsigned(read_y) < 368) then
+    if (unsigned(pixel_x) >= 192 and unsigned(pixel_x) < 448 and -- start reading 1 25MHz cycle early
+        unsigned(pixel_y) >= 112 and unsigned(pixel_y) < 368) then
 
         -- offsets the read_x and read_y so that (192,112) is (0,0) address in the buffer.
         -- must then resize result to be 8 bit to match size of read_addr
         -- finally, as with write address, shifts y left by 8 (*256), then adds x
         read_addr <= std_logic_vector(
-                resize(unsigned(read_y) - to_unsigned(112,10),8) & 
-                resize(unsigned(read_x) - to_unsigned(191,10),8) -- +1 makes it read the 192 address at 191, will be pipelined into the ram
+                resize(unsigned(pixel_y) - to_unsigned(112,10),8) & 
+                resize(unsigned(pixel_x) - to_unsigned(192,10),8) -- +1 makes it read the 192 address at 191, will be pipelined into the ram
             ); 
 
     else
@@ -256,7 +275,7 @@ end process;
             end if;
             
             -- read addres
-            buff0_addr <= read_addr_delayed; -- delayed by 2 100MHz cycles after being sped up by 1 25MHz cycle
+            buff0_addr <= read_addr_delayed; -- delayed by 1 100MHz cycle
         elsif(front_buff = '1') then -- read 1, write to 0
             -- write address
             if(start_clear = '1') then
@@ -348,10 +367,10 @@ begin
 end process;
 
 
--- takes signal from MSB of shift register (2 cycle delay)
-VGA_out <= VGA_out_sg when video_on_delayed(1) = '1' else (others => '0'); -- only display when video is on
-VGA_HS <= HS_delayed(1);
-VGA_VS <= VS_delayed(1);
+-- takes signal from MSB of shift register (4 cycle delay)
+VGA_out <= VGA_out_sg when video_on_delayed(3) = '1' else (others => '0'); -- only display when video is on
+VGA_HS <= HS_delayed(3);
+VGA_VS <= VS_delayed(3);
 
 
 write_data(0) <= '0' when start_clear = '1' else '1';
