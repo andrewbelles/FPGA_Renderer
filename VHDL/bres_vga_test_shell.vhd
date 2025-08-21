@@ -48,10 +48,10 @@ component vga_controller is
 end component;
 
 component framebuffer is
-      Port (clk                 :   in std_logic;
+      Port (clk               :   in std_logic;
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- addess to write
           write_en            :   in std_logic;
-          pixel_x, pixel_y      :   in std_logic_vector(9 downto 0); -- address to read
+          pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
@@ -68,60 +68,60 @@ component framebuffer is
 end component;
 
 component graphics_manager is
-    Port (clk                  :       in std_logic;
+    Port (clk              :       in std_logic;
       new_vertices         :       in  std_logic; -- from central controller, signals there are new verticies ready
       vertices             :       in  array_4x16_t;
       clear_request        :       out std_logic;
       clear_fulfilled      :       in std_logic;
-      tet_drawn :      out std_logic;
+      tet_drawn            :       out std_logic; -- tells framebuffer that we have finished drawing tet
       load_mem             :       out std_logic;
       x, y                 :       out std_logic_vector(7 downto 0)
        );
 end component;
 
 -- signal declarations
-signal video_on : STD_LOGIC;
-signal HS_sig, VS_sig   : std_logic;
-signal color    : STD_LOGIC_VECTOR(11 downto 0);
+signal video_on          : STD_LOGIC;
+signal HS_sig, VS_sig    : std_logic;
+signal color             : STD_LOGIC_VECTOR(11 downto 0);
 
-signal write_x, write_y : std_logic_vector(7 downto 0);
-signal write_en, buffer_write_sel         : std_logic;
-signal pixel_x, pixel_y : std_logic_vector(9 downto 0);
-signal dummy_reset: std_logic;
-signal dummy_nv : std_logic;
-signal dummy_vertices : array_4x16_t;
+signal write_x, write_y  : std_logic_vector(7 downto 0);
+signal write_en          : std_logic;
+signal pixel_x, pixel_y  : std_logic_vector(9 downto 0);
+signal dummy_reset       : std_logic;
+signal dummy_nv          : std_logic;
+signal dummy_vertices    : array_4x16_t;
 
 signal clear_fulfilled, clear_request, tet_drawn : std_logic;
 
 -- test signal 
 signal pulse_counter : integer := 0;
-
-
--- Put these declarations in your architecture declarative region
 type vertex_quad_t is array(0 to 3) of std_logic_vector(15 downto 0);
-constant NUM_FRAMES      : natural := 16;
-constant TICKS_PER_FRAME : natural := 1000000; -- adjust for frame rate
+
+-- Slow, visible pace on a 60 Hz monitor (?8 Hz updates at 100 MHz)
+constant TICKS_PER_FRAME : natural := 12_500_000;
+
+constant NUM_FRAMES : natural := 16;
 
 type anim_rom_t is array(0 to NUM_FRAMES-1) of vertex_quad_t;
 
--- 16 frames of a square moving diagonally; each vertex is packed as X[15:8], Y[7:0]
+-- 4-point "kite/tetra" shape that spins and bounces; X in high byte, Y in low byte
 constant FRAMES : anim_rom_t := (
-  0  => (x"4040", x"6040", x"6060", x"4060"),
-  1  => (x"4442", x"6442", x"6462", x"4462"),
-  2  => (x"4844", x"6844", x"6864", x"4864"),
-  3  => (x"4C46", x"6C46", x"6C66", x"4C66"),
-  4  => (x"5048", x"7048", x"7068", x"5068"),
-  5  => (x"544A", x"744A", x"746A", x"546A"),
-  6  => (x"584C", x"784C", x"786C", x"586C"),
-  7  => (x"5C4E", x"7C4E", x"7C6E", x"5C6E"),
-  8  => (x"6050", x"8050", x"8070", x"6070"),
-  9  => (x"6452", x"8452", x"8472", x"6472"),
-  10 => (x"6854", x"8854", x"8874", x"6874"),
-  11 => (x"6C56", x"8C56", x"8C76", x"6C76"),
-  12 => (x"7058", x"9058", x"9078", x"7078"),
-  13 => (x"745A", x"945A", x"947A", x"747A"),
-  14 => (x"785C", x"985C", x"987C", x"787C"),
-  15 => (x"7C5E", x"9C5E", x"9C7E", x"7C7E")
+  0  => (x"5810", x"8460", x"5870", x"2C60"),
+  1  => (x"5E13", x"8A63", x"5E73", x"3263"),
+  2  => (x"2C4E", x"7C22", x"8C4E", x"7C7A"),
+  3  => (x"3251", x"8225", x"9251", x"827D"),
+  4  => (x"708C", x"443C", x"702C", x"9C3C"),
+  5  => (x"768F", x"4A3F", x"762F", x"A23F"),
+  6  => (x"B45A", x"6486", x"545A", x"642E"),
+  7  => (x"BA5D", x"6A89", x"5A5D", x"6A31"),
+  8  => (x"7C22", x"A872", x"7C82", x"5072"),
+  9  => (x"761F", x"A26F", x"767F", x"4A6F"),
+  10 => (x"3854", x"8828", x"9854", x"8880"),
+  11 => (x"3251", x"8225", x"9251", x"827D"),
+  12 => (x"6486", x"3836", x"6426", x"9036"),
+  13 => (x"5E83", x"3233", x"5E23", x"8A33"),
+  14 => (x"9048", x"4074", x"3048", x"401C"),
+  15 => (x"8A45", x"3A71", x"2A45", x"3A19")
 );
 
 signal frame_tick_cnt : natural range 0 to TICKS_PER_FRAME-1 := 0;
@@ -226,23 +226,22 @@ manager : graphics_manager
 --end process;
 
 
--- New test process: cycles through FRAMES and pulses dummy_nv
+
+-- Animation driver: loads a new 4-vertex set every TICKS_PER_FRAME clocks,
+-- pulses dummy_nv for exactly one clock.
 test_vertices : process(clk_ext_port)
 begin
   if rising_edge(clk_ext_port) then
     if frame_tick_cnt = TICKS_PER_FRAME-1 then
       frame_tick_cnt <= 0;
 
-      -- Load next set of vertices
       dummy_vertices(0) <= FRAMES(frame_idx)(0);
       dummy_vertices(1) <= FRAMES(frame_idx)(1);
       dummy_vertices(2) <= FRAMES(frame_idx)(2);
       dummy_vertices(3) <= FRAMES(frame_idx)(3);
 
-      -- One-clock pulse to indicate "new vertices"
       dummy_nv <= '1';
 
-      -- Advance frame (wrap around)
       if frame_idx = NUM_FRAMES-1 then
         frame_idx <= 0;
       else

@@ -25,19 +25,17 @@ use IEEE.NUMERIC_STD.ALL;
 use work.array_types.all;
 entity framebuffer is
     Port (clk                 :   in std_logic;
-          clear_request          :   in std_logic; -- tells framebuffer to clear back 
-          tet_drawn       :   in std_logic; -- tells framebuffer bres is complete
+          clear_request       :   in std_logic; -- tells framebuffer to clear back 
+          tet_drawn           :   in std_logic; -- tells framebuffer bres is complete
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- address to write
-          
-          -- Needs to have a data in line
           write_en            :   in std_logic;
-          pixel_x, pixel_y      :   in std_logic_vector(9 downto 0); -- address to read
+          pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
           VS_in               :   in std_logic;
         
-          clear_fulfilled        :   out std_logic; -- tells manager back is cleared
+          clear_fulfilled     :   out std_logic; -- tells manager back buff is cleared
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
           VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 8 bit for an 8 bit color
@@ -48,12 +46,12 @@ architecture Behavioral of framebuffer is
 -- BRAM component, width 1, depth 65536
 COMPONENT blk_mem_gen_0
   PORT (
-    clka : IN STD_LOGIC;
-    ena : IN STD_LOGIC;
-    wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
-    dina : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    douta : OUT STD_LOGIC_VECTOR(0 DOWNTO 0)
+    clka    : IN STD_LOGIC;
+    ena     : IN STD_LOGIC;
+    wea     : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
+    addra   : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    dina    : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
+    douta   : OUT STD_LOGIC_VECTOR(0 DOWNTO 0)
   );
 END COMPONENT;
 

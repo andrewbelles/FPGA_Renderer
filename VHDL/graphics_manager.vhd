@@ -30,10 +30,10 @@ entity graphics_manager is
 Port (clk                  :       in std_logic;
       new_vertices         :       in  std_logic; -- from central controller, signals there are new vertices ready
       vertices             :       in  array_4x16_t;
-      clear_fulfilled         :       in std_logic;
+      clear_fulfilled      :       in std_logic;
       
-      clear_request           :       out std_logic; -- control signal to tell framebuffer to clear back
-      tet_drawn   :       out std_logic; -- control signal to tell framebuffer bres is finished
+      clear_request        :       out std_logic; -- control signal to tell framebuffer to clear back
+      tet_drawn            :       out std_logic; -- control signal to tell framebuffer bres is finished
       load_mem             :       out std_logic;
       x, y                 :       out std_logic_vector(7 downto 0)
        );

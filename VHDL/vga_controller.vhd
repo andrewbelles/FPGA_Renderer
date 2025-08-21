@@ -41,22 +41,22 @@ architecture behavior of vga_controller is
     signal clk_counter : unsigned(3 downto 0) := (others => '0');
     signal pclk_tc : std_logic := '0';
     -- VGA Constants (taken directly from VGA Class Notes)
-    constant left_border : integer := 48;
-    constant h_display   : integer := 640;
-    constant right_border : integer := 16;
-    constant h_retrace    : integer := 96;
-    constant HSCAN        : integer := left_border + h_display + right_border + h_retrace - 1; --number of PCLKs in an H_sync period
+    constant left_border   : integer := 48;
+    constant h_display     : integer := 640;
+    constant right_border  : integer := 16;
+    constant h_retrace     : integer := 96;
+    constant HSCAN         : integer := left_border + h_display + right_border + h_retrace - 1; --number of PCLKs in an H_sync period
 
     -- H_sync process
     --signal h_sync_sg     : STD_LOGIC := '1'; -- start at 1
-    signal hscan_counter : unsigned(9 downto 0) := (others => '0');
-    signal hscan_tc : std_logic := '0';
+    signal hscan_counter   : unsigned(9 downto 0) := (others => '0');
+    signal hscan_tc        : std_logic := '0';
     -- V_sync process
-    constant top_border   : integer := 29;
-    constant v_display    : integer := 480;
+    constant top_border    : integer := 29;
+    constant v_display     : integer := 480;
     constant bottom_border : integer := 10;
-    constant v_retrace    : integer := 2;
-    constant VSCAN        : integer := top_border + v_display + bottom_border + v_retrace - 1; --number of H_syncs in an V_sync period
+    constant v_retrace     : integer := 2;
+    constant VSCAN         : integer := top_border + v_display + bottom_border + v_retrace - 1; --number of H_syncs in an V_sync period
 
     -- V_sync process
    -- signal v_sync_sg     : STD_LOGIC := '1'; -- start at 1
