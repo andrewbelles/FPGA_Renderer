@@ -96,6 +96,37 @@ signal clear_fulfilled, clear_request, tet_drawn : std_logic;
 -- test signal 
 signal pulse_counter : integer := 0;
 
+
+-- Put these declarations in your architecture declarative region
+type vertex_quad_t is array(0 to 3) of std_logic_vector(15 downto 0);
+constant NUM_FRAMES      : natural := 16;
+constant TICKS_PER_FRAME : natural := 1000000; -- adjust for frame rate
+
+type anim_rom_t is array(0 to NUM_FRAMES-1) of vertex_quad_t;
+
+-- 16 frames of a square moving diagonally; each vertex is packed as X[15:8], Y[7:0]
+constant FRAMES : anim_rom_t := (
+  0  => (x"4040", x"6040", x"6060", x"4060"),
+  1  => (x"4442", x"6442", x"6462", x"4462"),
+  2  => (x"4844", x"6844", x"6864", x"4864"),
+  3  => (x"4C46", x"6C46", x"6C66", x"4C66"),
+  4  => (x"5048", x"7048", x"7068", x"5068"),
+  5  => (x"544A", x"744A", x"746A", x"546A"),
+  6  => (x"584C", x"784C", x"786C", x"586C"),
+  7  => (x"5C4E", x"7C4E", x"7C6E", x"5C6E"),
+  8  => (x"6050", x"8050", x"8070", x"6070"),
+  9  => (x"6452", x"8452", x"8472", x"6472"),
+  10 => (x"6854", x"8854", x"8874", x"6874"),
+  11 => (x"6C56", x"8C56", x"8C76", x"6C76"),
+  12 => (x"7058", x"9058", x"9078", x"7078"),
+  13 => (x"745A", x"945A", x"947A", x"747A"),
+  14 => (x"785C", x"985C", x"987C", x"787C"),
+  15 => (x"7C5E", x"9C5E", x"9C7E", x"7C7E")
+);
+
+signal frame_tick_cnt : natural range 0 to TICKS_PER_FRAME-1 := 0;
+signal frame_idx      : natural range 0 to NUM_FRAMES-1      := 0;
+
 begin
 
 -- wire the controller
@@ -171,30 +202,58 @@ manager : graphics_manager
 --dummy_vertices(0) <= x"a948";
 --dummy_vertices(1) <= x"5648";
 --dummy_vertices(2) <= x"80b7";
+----dummy_vertices(3) <= x"8080";
+--test_vertices: process(clk_ext_port)
+--begin
+--    if rising_edge(clk_ext_port) then
+--        -- hold dummy vertices
+--dummy_vertices(0) <= x"a948";
+--dummy_vertices(1) <= x"5648";
+--dummy_vertices(2) <= x"80b7";
 --dummy_vertices(3) <= x"8080";
-test_vertices: process(clk_ext_port)
+
+--        -- increment counter
+--        pulse_counter <= pulse_counter + 1;
+
+--        -- generate one-clock pulse for new_vertices
+--        if pulse_counter = 1000000 then  -- adjust for timing
+--            dummy_nv <= '1';
+--            pulse_counter <= 0;
+--        else
+--            dummy_nv <= '0';
+--        end if;
+--    end if;
+--end process;
+
+
+-- New test process: cycles through FRAMES and pulses dummy_nv
+test_vertices : process(clk_ext_port)
 begin
-    if rising_edge(clk_ext_port) then
-        -- hold dummy vertices
-        dummy_vertices(0) <= "0000000000000000";
-        dummy_vertices(1) <= "1111111111111111";
-        dummy_vertices(2) <= "0000000011111111";
-        dummy_vertices(3) <= "1111111100000000";
+  if rising_edge(clk_ext_port) then
+    if frame_tick_cnt = TICKS_PER_FRAME-1 then
+      frame_tick_cnt <= 0;
 
-        -- increment counter
-        pulse_counter <= pulse_counter + 1;
+      -- Load next set of vertices
+      dummy_vertices(0) <= FRAMES(frame_idx)(0);
+      dummy_vertices(1) <= FRAMES(frame_idx)(1);
+      dummy_vertices(2) <= FRAMES(frame_idx)(2);
+      dummy_vertices(3) <= FRAMES(frame_idx)(3);
 
-        -- generate one-clock pulse for new_vertices
-        if pulse_counter = 1000000 then  -- adjust for timing
-            dummy_nv <= '1';
-            pulse_counter <= 0;
-        else
-            dummy_nv <= '0';
-        end if;
+      -- One-clock pulse to indicate "new vertices"
+      dummy_nv <= '1';
+
+      -- Advance frame (wrap around)
+      if frame_idx = NUM_FRAMES-1 then
+        frame_idx <= 0;
+      else
+        frame_idx <= frame_idx + 1;
+      end if;
+    else
+      frame_tick_cnt <= frame_tick_cnt + 1;
+      dummy_nv <= '0';
     end if;
+  end if;
 end process;
-
-
     
 -- wire the correct colors by slicing up color vector into groups of 4
 red <= color(11) & color(10) & color(9) & color(8);
