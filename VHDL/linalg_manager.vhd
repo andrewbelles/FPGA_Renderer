@@ -50,6 +50,7 @@ end component projection;
   signal projection_en    : std_logic := '0'; 
   signal update_r_en      : std_logic := '0'; 
   signal update_packet_en : std_logic := '0'; 
+  signal clear_rotate_en  : std_logic := '0'; 
   signal set_en           : std_logic := '0';
   signal rotation_set     : std_logic := '0'; 
   signal projection_set   : std_logic := '0';
@@ -66,7 +67,7 @@ begin
 rotate: rotation
  port map(
     clk_port   => clk_port,
-    reset_port => reset_en,
+    reset_port => clear_rotate_en,
     angle      => curr_angle,
     dir        => curr_dir,
     x          => inx,
@@ -79,8 +80,8 @@ rotate: rotation
 
 -- Mux each value to be used by rotate 
 inx        <= x when second_flag = '0' else rotated_coords(0);
-inx        <= y when second_flag = '0' else rotated_coords(1);
-inx        <= z when second_flag = '0' else rotated_coords(2);
+iny        <= y when second_flag = '0' else rotated_coords(1);
+inz        <= z when second_flag = '0' else rotated_coords(2);
 curr_angle <= angle(0) when second_flag = '0' else angle(1);
 curr_dir   <= dir(0)   when second_flag = '0' else dir(0);
 
@@ -108,10 +109,21 @@ begin
   end if; 
 end process set_values; 
 
-nx <= rotated_coords(0);
-ny <= rotated_coords(1);
-nz <= rotated_coords(2);
-
+set_output: process( clk_port ) 
+begin 
+  if rising_edge( clk_port ) then 
+     if reset_en = '1' then 
+       nx <= (others => '0'); 
+       ny <= (others => '0'); 
+       nz <= (others => '0');
+     elsif set_en = '1' then 
+       nx <= rotated_coords(0);
+       ny <= rotated_coords(1);
+       nz <= rotated_coords(2);
+     end if; 
+  end if; 
+end process set_output; 
+  
 project: projection 
 port map( 
   clk_port     => clk_port, 
@@ -124,7 +136,6 @@ port map(
   set_port     => projection_set); 
 
 set_port <= set_en;
-
 
 --------------------------------------------------------------------------
 -- FSM Logic 
@@ -174,6 +185,7 @@ begin
   flag_en          <= '0';
   update_r_en      <= '0';
   update_packet_en <= '0';
+  clear_rotate_en  <= '0'; 
 
   case ( current_state ) is 
     when idle => 
@@ -182,6 +194,8 @@ begin
       if second_flag = '1' then 
         projection_en <= '1'; 
       end if; 
+      
+      clear_rotate_en <= '1'; 
       update_r_en <= '1'; 
       if second_flag = '0' then 
         flag_en <= '1'; 

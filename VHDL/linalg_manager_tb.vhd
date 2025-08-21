@@ -64,10 +64,8 @@ begin
   angle(0) <= x"0861"; --  30
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
-  dir(1)   <= "01";    -- y
-    wait for clk_period; 
-  load_port <= '0'; 
-  wait for 50*clk_period; 
+  dir(1)   <= "01";    -- y 
+  wait for 200*clk_period; 
 
   load_port  <= '0';
   reset_port <= '1'; 
@@ -81,9 +79,7 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-    wait for clk_period; 
-  load_port <= '0'; 
-  wait for 50*clk_period; 
+  wait for 200*clk_period; 
 
   load_port  <= '0';
   reset_port <= '1'; 
@@ -97,9 +93,7 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-    wait for clk_period; 
-  load_port <= '0'; 
-  wait for 50*clk_period; 
+  wait for 200*clk_period; 
 
   load_port  <= '0';
   reset_port <= '1'; 
@@ -113,8 +107,6 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  wait for clk_period; 
-  load_port <= '0'; 
   wait; 
 end process stim_proc;
 
