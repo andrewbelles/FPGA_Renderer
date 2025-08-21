@@ -3,6 +3,8 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
 package array_types is 
+  type array_2x2_t is array (0 to 1) of std_logic_vector(1 downto 0);
+  type array_2x16_t is array (0 to 1) of std_logic_vector(15 downto 0);
   type array_3x16_t is array (0 to 2) of std_logic_vector(15 downto 0);
   type array_4x16_t is array (0 to 3) of std_logic_vector(15 downto 0);
 

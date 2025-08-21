@@ -40,10 +40,11 @@ end component multiplier_24x24;
   type state_type is ( idle, pool_vals, divide, intercept, done );
   signal current_state, next_state : state_type := idle; 
 
+  signal inv_z          : signed(23 downto 0)           := (others => '0'); 
   signal perspective    : std_logic_vector(23 downto 0) := (others => '0');
   signal points         : array_2x24_t := (others => (others => '0'));
   signal divided_points : array_2x24_t := (others => (others => '0'));
-  signal transl_points  : std_logic_vector(16 downto 0) := (others => '0');
+  signal transl_points  : std_logic_vector(15 downto 0) := (others => '0');
   signal pool_set       : std_logic_vector(2 downto 0)  := (others => '0');
   signal divide_set     : std_logic_vector(1 downto 0)  := (others => '0');
   signal pool_done      : std_logic := '0';
@@ -59,9 +60,8 @@ end component multiplier_24x24;
   constant m00          : std_logic_vector(23 downto 0) := x"0014c9";
   constant m11          : std_logic_vector(23 downto 0) := x"001BB6";
   constant d12          : std_logic_vector(4 downto 0)  := "01100";
-  constant b            : signed(23 downto 0) := x"080000";
+  constant b            : signed(23 downto 0) := x"000080";
 begin 
-
 --------------------------------------------------------------------------
 -- Get perspective from 1/z   
 --------------------------------------------------------------------------
@@ -74,6 +74,7 @@ get_reciprocal: reciprocal_24b
     reciprocal => perspective,
     set_port   => pool_set(0));
 
+inv_z <= -signed(z);
 --------------------------------------------------------------------------
 -- Multiply Perspective Matrix against points  
 --------------------------------------------------------------------------
@@ -147,6 +148,7 @@ affine_points: process( divided_points, intercept_en )
   variable x_packet : unsigned(7 downto 0) := (others => '0');
   variable y_packet : unsigned(7 downto 0) := (others => '0');
 begin 
+  round    := x"000800";
   x_packet := (others => '0');
   y_packet := (others => '0');
   x_round  := (others => '0');
@@ -158,14 +160,15 @@ begin
       round := -round; 
     end if; 
    
-    x_round := shift_right(x_round + round, 12) + b;
+    x_round := shift_right( shift_left(x_round, 7) + round, 12) + b;
 
-    y_round := signed(divided_points(0));
+    round := x"000800";
+    y_round := -signed(divided_points(1));
     if y_round(23) = '1' then 
       round := -round; 
     end if; 
    
-    y_round := shift_right(y_round + round, 12) + b;
+    y_round := shift_right( shift_left(y_round, 7) + round, 12) + b;
     
     transl_points(15 downto 8) <= std_logic_vector(x_round(7 downto 0));
     transl_points(7 downto 0)  <= std_logic_vector(y_round(7 downto 0));

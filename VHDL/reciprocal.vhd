@@ -156,18 +156,6 @@ read_seed: newton_lut
 addr <= std_logic_vector(norm(21 downto 12));
 newton_seed <= fetched_seed;
 
---get_seed: process( clk_port )
---begin 
---  if rising_edge( clk_port ) then
---    bufr_seed <= fetched_seed;  
---    if reset_en = '1' then 
---      newton_seed <= (others => '0');
---    elsif seed_en = '1' then  
---      newton_seed <= bufr_seed; 
---    end if; 
---  end if;
---end process get_seed; 
-
 --------------------------------------------------------------------------
 -- Newton's Method 
 --------------------------------------------------------------------------
