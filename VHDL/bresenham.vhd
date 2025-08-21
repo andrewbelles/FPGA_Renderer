@@ -46,7 +46,7 @@ signal current_state, next_state : state := IDLE;
 begin
 
 process(clk)
-variable dx, dy, err, e2 : signed(9 downto 0);
+variable dx, dy, err, e2 : signed(15 downto 0); -- made this 16 bits (definitely overkill) just to avoid any problem of ever overflowing
 variable right, down     : std_logic;
 variable x0_var : signed(8 downto 0);
 variable x1_var : signed(8 downto 0);
@@ -67,11 +67,11 @@ begin
                         x1_var := signed('0' & x1); 
                         y1_var := signed('0' & y1); 
                         
-                        dx := resize(x1_var, 10) - resize(x0_var, 10);
+                        dx := resize(x1_var, 16) - resize(x0_var, 16);
                         if(dx >= 0) then right := '1'; else right := '0'; end if;
                         if(right /= '1') then dx := -dx; end if;
                         
-                        dy := resize(y1_var, 10) - resize(y0_var, 10);
+                        dy := resize(y1_var, 16) - resize(y0_var, 16);
                         if(dy >= 0) then down := '1'; else down := '0'; end if;
                         if(down = '1') then dy := -dy; end if;
                         
@@ -90,7 +90,7 @@ begin
                         plot <= '1';
                         e2 := err sll 1; -- shift left, preserves sign
                         if(e2 > dy) then
-                            err := err + resize(dy, 10);
+                            err := err + resize(dy, 16);
                             if(right = '1') then
                                 x_sg <= x_sg + 1;
                             else
@@ -98,7 +98,7 @@ begin
                             end if;
                         end if;
                         if(e2 < dx) then
-                            err := err + resize(dx, 10);
+                            err := err + resize(dx, 16);
                             if(down = '1') then
                                 y_sg <= y_sg + 1;
                             else
