@@ -95,37 +95,91 @@ signal clear_fulfilled, clear_request, tet_drawn : std_logic;
 
 -- test signal 
 signal pulse_counter : integer := 0;
-type vertex_quad_t is array(0 to 3) of std_logic_vector(15 downto 0);
-
--- Slow, visible pace on a 60 Hz monitor (?8 Hz updates at 100 MHz)
-constant TICKS_PER_FRAME : natural := 12_500_000;
+--type vertex_quad_t is array(0 to 3) of std_logic_vector(15 downto 0);
 
 constant NUM_FRAMES : natural := 16;
+--type vertex_quad_t is array(0 to 3) of std_logic_vector(15 downto 0);
 
-type anim_rom_t is array(0 to NUM_FRAMES-1) of vertex_quad_t;
+--type anim_rom_t is array(0 to NUM_FRAMES-1) of vertex_quad_t;
 
--- 4-point "kite/tetra" shape that spins and bounces; X in high byte, Y in low byte
-constant FRAMES : anim_rom_t := (
-  0  => (x"5810", x"8460", x"5870", x"2C60"),
-  1  => (x"5E13", x"8A63", x"5E73", x"3263"),
-  2  => (x"2C4E", x"7C22", x"8C4E", x"7C7A"),
-  3  => (x"3251", x"8225", x"9251", x"827D"),
-  4  => (x"708C", x"443C", x"702C", x"9C3C"),
-  5  => (x"768F", x"4A3F", x"762F", x"A23F"),
-  6  => (x"B45A", x"6486", x"545A", x"642E"),
-  7  => (x"BA5D", x"6A89", x"5A5D", x"6A31"),
-  8  => (x"7C22", x"A872", x"7C82", x"5072"),
-  9  => (x"761F", x"A26F", x"767F", x"4A6F"),
-  10 => (x"3854", x"8828", x"9854", x"8880"),
-  11 => (x"3251", x"8225", x"9251", x"827D"),
-  12 => (x"6486", x"3836", x"6426", x"9036"),
-  13 => (x"5E83", x"3233", x"5E23", x"8A33"),
-  14 => (x"9048", x"4074", x"3048", x"401C"),
-  15 => (x"8A45", x"3A71", x"2A45", x"3A19")
-);
+---- 4-point "kite/tetra" shape that spins and bounces; X in high byte, Y in low byte
+--constant FRAMES : anim_rom_t := (
+--  0  => (x"5810", x"8460", x"5870", x"2C60"),
+--  1  => (x"5E13", x"8A63", x"5E73", x"3263"),
+--  2  => (x"2C4E", x"7C22", x"8C4E", x"7C7A"),
+--  3  => (x"3251", x"8225", x"9251", x"827D"),
+--  4  => (x"708C", x"443C", x"702C", x"9C3C"),
+--  5  => (x"768F", x"4A3F", x"762F", x"A23F"),
+--  6  => (x"B45A", x"6486", x"545A", x"642E"),
+--  7  => (x"BA5D", x"6A89", x"5A5D", x"6A31"),
+--  8  => (x"7C22", x"A872", x"7C82", x"5072"),
+--  9  => (x"761F", x"A26F", x"767F", x"4A6F"),
+--  10 => (x"3854", x"8828", x"9854", x"8880"),
+--  11 => (x"3251", x"8225", x"9251", x"827D"),
+--  12 => (x"6486", x"3836", x"6426", x"9036"),
+--  13 => (x"5E83", x"3233", x"5E23", x"8A33"),
+--  14 => (x"9048", x"4074", x"3048", x"401C"),
+--  15 => (x"8A45", x"3A71", x"2A45", x"3A19")
+--);
+constant TICKS_PER_FRAME : natural := 8_000_000;
 
 signal frame_tick_cnt : natural range 0 to TICKS_PER_FRAME-1 := 0;
 signal frame_idx      : natural range 0 to NUM_FRAMES-1      := 0;
+
+
+-- Types
+
+
+
+-- Model-space "big kite/tetra" around origin (pixels)
+type i16_arr_t is array(0 to 3) of integer range -32768 to 32767;
+constant MODEL_X : i16_arr_t := (  0,  32,  0, -32);
+constant MODEL_Y : i16_arr_t := (-52,  12, 36,  12);
+constant MAX_EXTENT : integer := 52; -- worst-case radius for bounds
+
+-- Scale as Q10.6 (divide by 64 after multiply); integers only
+constant SCALE_MIN  : integer := 48;   -- ~0.75x
+constant SCALE_MAX  : integer := 128;  -- 2.0x
+constant SCALE_STEP : integer := 2;
+
+-- Wiggle (per-vertex scale ripple), small but noticeable
+constant WIGGLE_MAX  : integer := 10;  -- max +/- added to scale
+constant WIGGLE_STEP : integer := 1;
+
+-- Rotation snaps every ROT_PERIOD frames (0,90,180,270)
+constant ROT_PERIOD : natural := 6;
+
+
+signal cx, cy   : integer range 0 to 255 := 128; -- center position
+signal vx, vy   : integer range -3 to 3  := 2;   -- velocity
+signal scale_q6 : integer range 0 to 255 := 80;  -- start ~1.25x
+signal scale_dir: integer range -1 to 1  := 1;
+
+signal wiggle_q6 : integer range 0 to 63 := 0;
+signal wiggle_dir: integer range -1 to 1 := 1;
+
+signal rot_state : natural range 0 to 3 := 0;
+signal rot_ctr   : natural range 0 to ROT_PERIOD-1 := 0;
+
+-- Minimal helpers
+function clamp8(i : integer) return unsigned is
+begin
+  if i < 0 then
+    return to_unsigned(0, 8);
+  elsif i > 255 then
+    return to_unsigned(255, 8);
+  else
+    return to_unsigned(i, 8);
+  end if;
+end function;
+
+function pack_xy(xi, yi : integer) return std_logic_vector is
+  variable ux, uy : unsigned(7 downto 0);
+begin
+  ux := clamp8(xi);
+  uy := clamp8(yi);
+  return std_logic_vector(ux & uy);
+end function;
 
 begin
 
@@ -170,6 +224,146 @@ manager : graphics_manager
     x => write_x,
     y => write_y
     );
+
+
+
+-- Drive your existing signals:
+--   dummy_vertices(0..3) : std_logic_vector(15 downto 0)
+--   dummy_nv              : std_logic
+--   clk_ext_port          : std_logic
+
+test_vertices : process(clk_ext_port)
+  variable s      : integer;
+  variable w      : integer;
+  variable ext    : integer;
+  variable sx, sy : integer;
+  variable xr, yr : integer;
+  variable xw, yw : integer;
+  variable ls     : integer;
+begin
+  if rising_edge(clk_ext_port) then
+    if frame_tick_cnt = TICKS_PER_FRAME-1 then
+      frame_tick_cnt <= 0;
+
+      -- Snapshot current scale and wiggle
+      s := scale_q6;  -- Q6
+      w := wiggle_q6; -- Q6
+
+      -- Compute safe margin for bouncing (worst-case extent at current scale)
+      ext := (MAX_EXTENT * s) / 64; -- integer divide by 64
+
+      -- Emit 4 vertices
+      for i in 0 to 3 loop
+        -- Per-vertex twist: alternate +wiggle/-wiggle, also influenced by rotation
+        if ((i + integer(rot_state)) mod 2) = 0 then
+          ls := s + w;
+        else
+          ls := s - w;
+        end if;
+
+        -- Scale model (Q6)
+        sx := (MODEL_X(i) * ls) / 64;
+        sy := (MODEL_Y(i) * ls) / 64;
+
+        -- Snap-rotation (0/90/180/270): cheap and sharp
+        case rot_state is
+          when 0 => xr :=  sx;  yr :=  sy;
+          when 1 => xr := -sy;  yr :=  sx;
+          when 2 => xr := -sx;  yr := -sy;
+          when 3 => xr :=  sy;  yr := -sx;
+          when others => xr := sx; yr := sy;
+        end case;
+
+        -- Translate
+        xw := cx + xr;
+        yw := cy + yr;
+
+        -- Pack out
+        case i is
+          when 0 => dummy_vertices(0) <= pack_xy(xw, yw);
+          when 1 => dummy_vertices(1) <= pack_xy(xw, yw);
+          when 2 => dummy_vertices(2) <= pack_xy(xw, yw);
+          when 3 => dummy_vertices(3) <= pack_xy(xw, yw);
+          when others => null;
+        end case;
+      end loop;
+
+      -- One-clock strobe
+      dummy_nv <= '1';
+
+      -- Update motion: bounce within screen using current extent
+      if cx <= ext then
+        vx <=  abs(vx);
+      elsif cx >= 255 - ext then
+        vx <= -abs(vx);
+      end if;
+
+      if cy <= ext then
+        vy <=  abs(vy);
+      elsif cy >= 255 - ext then
+        vy <= -abs(vy);
+      end if;
+
+      cx <= cx + vx;
+      cy <= cy + vy;
+
+      -- Scale breathe
+      if scale_dir > 0 then
+        if scale_q6 + SCALE_STEP >= SCALE_MAX then
+          scale_q6 <= SCALE_MAX;
+          scale_dir <= -1;
+        else
+          scale_q6 <= scale_q6 + SCALE_STEP;
+        end if;
+      else
+        if scale_q6 <= SCALE_MIN + SCALE_STEP then
+          scale_q6 <= SCALE_MIN;
+          scale_dir <= 1;
+        else
+          scale_q6 <= scale_q6 - SCALE_STEP;
+        end if;
+      end if;
+
+      -- Wiggle triangle wave
+      if wiggle_dir > 0 then
+        if wiggle_q6 + WIGGLE_STEP >= WIGGLE_MAX then
+          wiggle_q6 <= WIGGLE_MAX;
+          wiggle_dir <= -1;
+        else
+          wiggle_q6 <= wiggle_q6 + WIGGLE_STEP;
+        end if;
+      else
+        if wiggle_q6 <= WIGGLE_STEP then
+          wiggle_q6 <= 0;
+          wiggle_dir <= 1;
+        else
+          wiggle_q6 <= wiggle_q6 - WIGGLE_STEP;
+        end if;
+      end if;
+
+      -- Rotation step (snap)
+      if rot_ctr = ROT_PERIOD-1 then
+        rot_ctr   <= 0;
+        if rot_state = 3 then
+          rot_state <= 0;
+        else
+          rot_state <= rot_state + 1;
+        end if;
+      else
+        rot_ctr <= rot_ctr + 1;
+      end if;
+
+    else
+      frame_tick_cnt <= frame_tick_cnt + 1;
+      dummy_nv <= '0';
+    end if;
+  end if;
+end process;
+
+
+
+
+
 
 --test_vertices: process(clk_ext_port)
 --begin
@@ -227,32 +421,32 @@ manager : graphics_manager
 
 
 
--- Animation driver: loads a new 4-vertex set every TICKS_PER_FRAME clocks,
--- pulses dummy_nv for exactly one clock.
-test_vertices : process(clk_ext_port)
-begin
-  if rising_edge(clk_ext_port) then
-    if frame_tick_cnt = TICKS_PER_FRAME-1 then
-      frame_tick_cnt <= 0;
+---- Animation driver: loads a new 4-vertex set every TICKS_PER_FRAME clocks,
+---- pulses dummy_nv for exactly one clock.
+--test_vertices : process(clk_ext_port)
+--begin
+--  if rising_edge(clk_ext_port) then
+--    if frame_tick_cnt = TICKS_PER_FRAME-1 then
+--      frame_tick_cnt <= 0;
 
-      dummy_vertices(0) <= FRAMES(frame_idx)(0);
-      dummy_vertices(1) <= FRAMES(frame_idx)(1);
-      dummy_vertices(2) <= FRAMES(frame_idx)(2);
-      dummy_vertices(3) <= FRAMES(frame_idx)(3);
+--      dummy_vertices(0) <= FRAMES(frame_idx)(0);
+--      dummy_vertices(1) <= FRAMES(frame_idx)(1);
+--      dummy_vertices(2) <= FRAMES(frame_idx)(2);
+--      dummy_vertices(3) <= FRAMES(frame_idx)(3);
 
-      dummy_nv <= '1';
+--      dummy_nv <= '1';
 
-      if frame_idx = NUM_FRAMES-1 then
-        frame_idx <= 0;
-      else
-        frame_idx <= frame_idx + 1;
-      end if;
-    else
-      frame_tick_cnt <= frame_tick_cnt + 1;
-      dummy_nv <= '0';
-    end if;
-  end if;
-end process;
+--      if frame_idx = NUM_FRAMES-1 then
+--        frame_idx <= 0;
+--      else
+--        frame_idx <= frame_idx + 1;
+--      end if;
+--    else
+--      frame_tick_cnt <= frame_tick_cnt + 1;
+--      dummy_nv <= '0';
+--    end if;
+--  end if;
+--end process;
     
 -- wire the correct colors by slicing up color vector into groups of 4
 red <= color(11) & color(10) & color(9) & color(8);
