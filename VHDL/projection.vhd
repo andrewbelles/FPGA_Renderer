@@ -178,7 +178,6 @@ begin
     if reset_en = '1' then 
       intercept_done <= '0'; 
       point_packet <= (others => '0');
-    -- save for 2 cycles 
     elsif intercept_en = '1' or set_en = '1' then  
       intercept_done <= '1';  
       point_packet <= transl_points;
