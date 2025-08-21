@@ -102,15 +102,20 @@ signal receiving : std_logic; -- -- from fsm to logic to say that we are receivi
 signal am_waiting   : std_logic; -- from fsm to logic to say that we are waiting for blanking region
 signal go_swap         : std_logic; -- from fsm to logic to say to swap which one is drawing to vga
 
-signal buff0_output_reg : std_logic_vector(0 downto 0);
-signal buff1_output_reg : std_logic_vector(0 downto 0);
+signal buff0_output_reg : std_logic_vector(1 downto 0);
+signal buff1_output_reg : std_logic_vector(1 downto 0);
 
 signal pixel_x_delayed : std_logic_vector(39 downto 0);
 signal pixel_y_delayed : std_logic_vector(39 downto 0);
+-- debugging
+signal pixel_x_delayed_sg : std_logic_vector(9 downto 0);
+signal pixel_y_delayed_sg : std_logic_vector(9 downto 0);
 
 -- debug
 
 begin
+pixel_x_delayed_sg <= pixel_x_delayed(39 downto 30);
+pixel_y_delayed_sg <= pixel_y_delayed(39 downto 30);
 buff0 : blk_mem_gen_0
   PORT MAP (
     clka => clk,
@@ -143,13 +148,13 @@ begin
    if (unsigned(pixel_x_delayed(39 downto 30)) >= 192 and unsigned(pixel_x_delayed(39 downto 30)) < 448 and
     unsigned(pixel_y_delayed(39 downto 30)) >= 112 and unsigned(pixel_y_delayed(39 downto 30)) < 368) then
         if(front_buff = '0') then -- if writing to buffer 1, read from buffer 0
-            if(buff0_output_reg(0) = '1') then
+            if(buff0_output_reg(1) = '1') then
                 VGA_out_sg <= (others => '1');
             else 
                 VGA_out_sg <= (others => '0');
             end if;
         elsif(front_buff = '1') then -- if writing to buffer 0, read from buffer 1
-            if(buff1_output_reg(0) = '1') then
+            if(buff1_output_reg(1) = '1') then
                 VGA_out_sg <= (others => '1');
             else 
                 VGA_out_sg <= (others => '0');
@@ -184,7 +189,9 @@ begin
         
         -- add register at output of BRAM
         buff0_output_reg(0) <= buff0_output(0);
+        buff0_output_reg(1) <= buff0_output_reg(0);
         buff1_output_reg(0) <= buff1_output(0);
+        buff1_output_reg(1) <= buff1_output_reg(0);
         
         -- delay address by 1 clock cycle to bring address change onto edge of pixel change
         read_addr_delayed <= read_addr;
@@ -193,11 +200,13 @@ begin
         pixel_x_delayed(19 downto 10) <= pixel_x_delayed(9 downto 0);
         pixel_x_delayed(29 downto 20) <= pixel_x_delayed(19 downto 10);
         pixel_x_delayed(39 downto 30) <= pixel_x_delayed(29 downto 20);
+       -- pixel_x_delayed(49 downto 40) <= pixel_x_delayed(39 downto 30);
 
         pixel_y_delayed(9 downto 0) <= pixel_y;
         pixel_y_delayed(19 downto 10) <= pixel_y_delayed(9 downto 0);
         pixel_y_delayed(29 downto 20) <= pixel_y_delayed(19 downto 10);
         pixel_y_delayed(39 downto 30) <= pixel_y_delayed(29 downto 20);
+       -- pixel_y_delayed(49 downto 40) <= pixel_y_delayed(39 downto 30);
         
     end if;
 end process;
@@ -222,8 +231,11 @@ clear_tc <= '1' when clear_addr = 65535 else '0';
 
 
  -- enable write on start clear high, select which one to write to
-buff1_wea(0) <= '1' when ((start_clear = '1' OR receiving = '1') and front_buff = '0')  else '0';
-buff0_wea(0) <= '1' when ((start_clear = '1' OR receiving = '1') and front_buff = '1')  else '0';
+ -- write_en solved the problem of having a pixel illuminated in the top left corner. This probelm stems from the fact that by default, 
+ -- I set the write address to 0. This means when we go to the RECEIVE state, it would write a 1 to 0,0 right away, then go to the correct address.
+ -- I believe it is solved now.
+buff1_wea(0) <= '1' when ((start_clear = '1' OR (write_en = '1' and receiving = '1')) and front_buff = '0')  else '0';
+buff0_wea(0) <= '1' when ((start_clear = '1' OR (write_en = '1' and receiving = '1')) and front_buff = '1')  else '0';
 
 
 
@@ -260,7 +272,7 @@ begin
 end process;
 
 -- connects up the addresses for the BRAMs
-  addr_logic : process(front_buff, read_addr_delayed, write_addr, start_clear, clear_addr)
+  addr_logic : process(front_buff, read_addr, write_addr, start_clear, clear_addr)
       begin
        -- safe defaults
         buff0_addr <= (others => '0');
@@ -275,7 +287,8 @@ end process;
             end if;
             
             -- read addres
-            buff0_addr <= read_addr_delayed; -- delayed by 1 100MHz cycle
+            buff0_addr <= read_addr; -- delayed by 1 100MHz cycle
+            
         elsif(front_buff = '1') then -- read 1, write to 0
             -- write address
             if(start_clear = '1') then
@@ -285,7 +298,7 @@ end process;
             end if;
             
             -- read address
-            buff1_addr <= read_addr_delayed;
+            buff1_addr <= read_addr;
 
         end if;
   end process;
