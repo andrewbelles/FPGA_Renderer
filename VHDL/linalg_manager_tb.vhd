@@ -14,7 +14,6 @@ port (
   reset_port   : in std_logic; 
   angle        : in array_2x16_t;   -- 3.12 fixed point
   dir          : in array_2x2_t;
-  angle_count  : in std_logic_vector(1 downto 0);
   x, y, z      : in std_logic_vector(23 downto 0);  
   nx, ny, nz   : out std_logic_vector(23 downto 0);
   point_packet : out std_logic_vector(15 downto 0);
@@ -26,7 +25,6 @@ end component update_point_24b;
   signal reset_port   : std_logic := '0'; 
   signal angle        : array_2x16_t := (others => (others => '0'));
   signal dir          : array_2x2_t  := (others => (others => '0'));
-  signal angle_count  : std_logic_vector(1 downto 0)  := (others => '0');
   signal x, y, z      : std_logic_vector(23 downto 0) := (others => '0');
   signal nx, ny, nz   : std_logic_vector(23 downto 0) := (others => '0');
   signal point_packet : std_logic_vector(15 downto 0) := (others => '0');
@@ -34,6 +32,22 @@ end component update_point_24b;
 
   constant clk_period : time := 10 ns; 
 begin 
+
+uut: update_point_24b 
+port map( 
+  clk_port => clk_port, 
+  load_port => load_port, 
+  reset_port => reset_port, 
+  angle => angle, 
+  dir => dir, 
+  x => x,
+  y => y, 
+  z => z, 
+  nx => nx, 
+  ny => ny, 
+  nz => nz, 
+  point_packet => point_packet, 
+  set_port => set_port); 
 
 clock_proc: process 
 begin 
@@ -51,7 +65,8 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  angle_count <= "01";
+    wait for clk_period; 
+  load_port <= '0'; 
   wait for 50*clk_period; 
 
   load_port  <= '0';
@@ -66,7 +81,8 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  angle_count <= "01";
+    wait for clk_period; 
+  load_port <= '0'; 
   wait for 50*clk_period; 
 
   load_port  <= '0';
@@ -81,7 +97,8 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  angle_count <= "01";
+    wait for clk_period; 
+  load_port <= '0'; 
   wait for 50*clk_period; 
 
   load_port  <= '0';
@@ -96,7 +113,8 @@ begin
   angle(1) <= x"1922"; --  90
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  angle_count <= "01";
+  wait for clk_period; 
+  load_port <= '0'; 
   wait; 
 end process stim_proc;
 
