@@ -31,8 +31,8 @@ use IEEE.NUMERIC_STD.ALL;
 entity uart_receiver is
     Port ( clk : in STD_LOGIC;
            rx : in STD_LOGIC;
-           data : out STD_LOGIC;
-           rx_done : out STD_LOGIC);
+           data : out STD_LOGIC_VECTOR(7 downto 0);
+           data_valid : out STD_LOGIC);
 end uart_receiver;
 
 architecture Behavioral of uart_receiver is
@@ -40,13 +40,13 @@ architecture Behavioral of uart_receiver is
 
 
 signal shift_reg    : std_logic_vector(7 downto 0) := (others => '0'); -- holds 8 bits of data
-signal baud_counter : unsigned(13 downto 0) := (others => '0'); -- need 14 bits to count to 9600 (baud rate)
+signal baud_counter : unsigned(13 downto 0) := (others => '0'); -- need 14 bits to count to 10416 (approx. ratio of clk rate to baud rate -- 100,000,000 / 9600)
 signal bit_counter  : unsigned(3 downto 0) := (others => '0');  -- need 4 bits to count 0 to 8 (8 bits of data). We shift 8 bits in, and increment as we shift so need to go 1 to 8
 
 signal baud_reset, bit_reset, shift_en : std_logic;
 signal baud_en, bit_inc : std_logic;
 signal tc_baud2, tc_baud, tc_bit : std_logic;
-type state is (IDLE, WAIT_TC2, SHIFT1, WAIT_TC, SHIFT2, DATA_READY);
+type state is (IDLE, WAIT_TC2, SHIFT1, WAIT_TC, SHIFT2, DATA_READY, WAIT_FOR_STOP);
 signal current_state, next_state : state;
 
 begin
@@ -78,9 +78,10 @@ begin
 end process;
 
 -- terminal counts
-tc_baud <= '1' when baud_counter = 9599 else '0'; -- count 0 to 9599 (one baud period)
-tc_baud2 <= '1' when baud_counter = 4799 else '0'; -- count 0 to 4799 (half of baud period)
-tc_bit <= '1' when bit_counter = 8 else '1'; -- count 1 to 8
+tc_baud <= '1' when baud_counter = 10416 else '0'; -- count 0 to 10416 (approx one baud period)
+tc_baud2 <= '1' when baud_counter = 5207 else '0'; -- count 0 to 5207 (approxhalf of baud period)
+tc_bit <= '1' when bit_counter = 8 else '0'; -- count 1 to 8
+
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- FSM
 state_update : process(clk) 
@@ -110,12 +111,16 @@ begin
             end if;
         when SHIFT2 =>
             if(tc_bit = '0') then
-                next_state <= SHIFT2;
+                next_state <= WAIT_TC;
             elsif(tc_bit = '1') then
                 next_state <= DATA_READY;
             end if;
         when DATA_READY =>
-            next_state <= IDLE;
+            next_state <= WAIT_FOR_STOP;
+        when WAIT_FOR_STOP =>
+            if(tc_baud = '1') then
+                next_state <= IDLE;
+            end if;
         when others =>
             next_state <= IDLE;
     end case;
@@ -128,24 +133,32 @@ begin
     baud_en <= '0';
     bit_inc <= '0';
     shift_en <= '0';
+    data_valid <= '0';
     case current_state is
         when WAIT_TC2 =>
             baud_en <= '1';
         when SHIFT1 =>
             baud_reset <= '1'; -- reset baud counter
-            shift_en <= '1';
+            shift_en <= '1'; -- shift in the start bit (will be shifted out)
+            bit_inc <= '1';
         when WAIT_TC =>
             baud_en <= '1';
         when SHIFT2 =>
+            baud_reset <= '1'; -- again reset baud counter when shifting
             shift_en <= '1';
             bit_inc <= '1';
+        when WAIT_FOR_STOP =>
+            baud_en <= '1';
         when DATA_READY =>
-            rx_done <= '1';
+            data_valid <= '1';
             bit_reset <= '1'; -- reset bit counter
             baud_reset <= '1'; -- reset baud counter
         when others =>
             null;
     end case;
 end process;
+
+-- assign output
+data <= shift_reg;
 
 end Behavioral;
