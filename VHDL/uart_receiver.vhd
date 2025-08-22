@@ -46,16 +46,27 @@ signal bit_counter  : unsigned(3 downto 0) := (others => '0');  -- need 4 bits t
 signal baud_reset, bit_reset, shift_en : std_logic;
 signal baud_en, bit_inc : std_logic;
 signal tc_baud2, tc_baud, tc_bit : std_logic;
-type state is (IDLE, WAIT_TC2, SHIFT1, WAIT_TC, SHIFT2, DATA_READY, WAIT_FOR_STOP);
+signal rx_delayed : std_logic_vector(1 downto 0);
+
+type state is (IDLE, WAIT_TC2, RECENTER_TIMING, WAIT_TC, SHIFT2, DATA_READY, DONE, WAIT_FOR_STOP);
 signal current_state, next_state : state;
 
 begin
+
+-- double synchronize input rx
+synchronizing: process(clk)
+begin
+    if(rising_edge(clk)) then
+        rx_delayed(0) <= rx;
+        rx_delayed(1) <= rx_delayed(0);
+    end if;
+end process;
 
 shift: process(clk)
 begin
     if(rising_edge(clk)) then
         if(shift_en = '1') then
-            shift_reg <= rx & shift_reg(7 downto 1); -- assumes UART sends LSB first
+            shift_reg <= rx_delayed(1) & shift_reg(7 downto 1); -- assumes UART sends LSB first
         end if;
     end if;
 end process;
@@ -80,7 +91,7 @@ end process;
 -- terminal counts
 tc_baud <= '1' when baud_counter = 10416 else '0'; -- count 0 to 10416 (approx one baud period)
 tc_baud2 <= '1' when baud_counter = 5207 else '0'; -- count 0 to 5207 (approxhalf of baud period)
-tc_bit <= '1' when bit_counter = 8 else '0'; -- count 1 to 8
+tc_bit <= '1' when bit_counter = 7 else '0'; -- count 1 to 8
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- FSM
@@ -91,19 +102,19 @@ begin
     end if;
 end process;
 
-ns_logic : process(current_state, rx, tc_baud2, tc_baud, tc_bit)
+ns_logic : process(current_state, rx_delayed, tc_baud2, tc_baud, tc_bit)
 begin
     next_state <= current_state;
     case current_state is
         when IDLE =>
-            if(rx = '0') then
+            if(rx_delayed(1) = '0') then
                 next_state <= WAIT_TC2; -- wait baud period/2 so that you are in center of data
             end if;
         when WAIT_TC2 =>
             if(tc_baud2 = '1') then
-                next_state <= SHIFT1;
+                next_state <= RECENTER_TIMING;
             end if;
-        when SHIFT1 =>
+        when RECENTER_TIMING =>
             next_state <= WAIT_TC;
         when WAIT_TC =>
             if(tc_baud = '1') then
@@ -113,8 +124,10 @@ begin
             if(tc_bit = '0') then
                 next_state <= WAIT_TC;
             elsif(tc_bit = '1') then
-                next_state <= DATA_READY;
+                next_state <= DONE;
             end if;
+        when DONE =>
+            next_state <= DATA_READY;
         when DATA_READY =>
             next_state <= WAIT_FOR_STOP;
         when WAIT_FOR_STOP =>
@@ -137,10 +150,8 @@ begin
     case current_state is
         when WAIT_TC2 =>
             baud_en <= '1';
-        when SHIFT1 =>
+        when RECENTER_TIMING =>
             baud_reset <= '1'; -- reset baud counter
-            shift_en <= '1'; -- shift in the start bit (will be shifted out)
-            bit_inc <= '1';
         when WAIT_TC =>
             baud_en <= '1';
         when SHIFT2 =>
