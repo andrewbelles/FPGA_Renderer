@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity update_point_24b is 
+entity update_point is 
 port(
   clk_port     : in std_logic; 
   load_port    : in std_logic; 
@@ -14,9 +14,9 @@ port(
   nx, ny, nz   : out std_logic_vector(23 downto 0);
   point_packet : out std_logic_vector(15 downto 0);
   set_port     : out std_logic);
-end update_point_24b; 
+end update_point; 
 
-architecture behavioral of update_point_24b is 
+architecture behavioral of update_point is 
 ----------------------- component declarations ---------------------------
 component rotation is 
 port( 

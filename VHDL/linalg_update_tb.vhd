@@ -7,7 +7,7 @@ entity update_point_tb is
 end entity update_point_tb;
 
 architecture testbench of update_point_tb is 
-component update_point_24b is 
+component update_point is 
 port (
   clk_port     : in std_logic; 
   load_port    : in std_logic; 
@@ -18,7 +18,7 @@ port (
   nx, ny, nz   : out std_logic_vector(23 downto 0);
   point_packet : out std_logic_vector(15 downto 0);
   set_port     : out std_logic);
-end component update_point_24b;
+end component update_point;
 
   signal clk_port     : std_logic := '0'; 
   signal load_port    : std_logic := '0'; 
@@ -33,7 +33,7 @@ end component update_point_24b;
   constant clk_period : time := 10 ns; 
 begin 
 
-uut: update_point_24b 
+uut: update_point 
 port map( 
   clk_port => clk_port, 
   load_port => load_port, 
