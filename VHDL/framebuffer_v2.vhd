@@ -361,7 +361,8 @@ begin
         when CB =>
             clearing <= '1'; -- to clearing logic (local)
         when CLEARED =>
-            clear_fulfilled <= '1'; -- to graphics manager
+            clear_fulfilled <= '1'; -- to bresenham_receiver
+            clear_fulfilled <= '1'; -- to bresenham_receiver
         when RECEIVE =>
             receiving <= '1';
         when WAITING =>
