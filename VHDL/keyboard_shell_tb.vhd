@@ -98,6 +98,30 @@ begin
     wait for BAUD_PERIOD;
     -- stop bit (1)
     RsRx_ext_port <= '1';
+    --idling in between
+    wait for 10*BAUD_PERIOD; 
+    -- start bit (0)
+    RsRx_ext_port <= '0';
+    wait for BAUD_PERIOD;
+    -- first data bit
+    RsRx_ext_port <= '1';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '0';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '0';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '0';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '0';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '1';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '1';
+    wait for BAUD_PERIOD;
+    RsRx_ext_port <= '0';
+    wait for BAUD_PERIOD;
+    -- stop bit (1)
+    RsRx_ext_port <= '1';
     wait;
     
 end process;

@@ -148,6 +148,10 @@ begin
     shift_en <= '0';
     data_valid <= '0';
     case current_state is
+        when IDLE =>
+            -- 
+            baud_reset <= '1';
+            bit_reset <= '1';
         when WAIT_TC2 =>
             baud_en <= '1';
         when RECENTER_TIMING =>
