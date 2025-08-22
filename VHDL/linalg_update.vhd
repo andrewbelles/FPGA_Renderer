@@ -169,7 +169,7 @@ begin
           next_state <= done; 
         end if; 
       when done => 
-        next_state <= idle; 
+        next_state <= done; -- stay in done, important for top level 
       when others => 
         null; 
     end case; 
