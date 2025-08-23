@@ -26,13 +26,15 @@ use IEEE.NUMERIC_STD.ALL;
 use work.array_types.all;
 entity graphics_manager is
 Port ( clk_ext_port	  : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
+       points         : in array_4x16_t;
+       draw_new_points     : in std_logic;
+       tet_drawn      : out std_logic;
+       can_draw            : out std_logic;
        red            : out std_logic_vector(3 downto 0);
        green          : out std_logic_vector(3 downto 0);
        blue           : out std_logic_vector(3 downto 0);
        HS             : out std_logic;
        VS             : out std_logic 		
-       
-       
  );
 end graphics_manager;
 
@@ -63,7 +65,8 @@ component framebuffer is
           
           clear_fulfilled : out std_logic;
           clear_request : in std_logic;
-          tet_drawn : in std_logic
+          tet_drawn : in std_logic;
+          ready_to_start : out std_logic
            );
 end component;
 
@@ -87,11 +90,11 @@ signal color             : STD_LOGIC_VECTOR(11 downto 0);
 signal write_x, write_y  : std_logic_vector(7 downto 0);
 signal write_en          : std_logic;
 signal pixel_x, pixel_y  : std_logic_vector(9 downto 0);
-signal dummy_reset       : std_logic;
-signal dummy_nv          : std_logic;
-signal dummy_vertices    : array_4x16_t;
+--signal dummy_reset       : std_logic;
+--signal dummy_nv          : std_logic;
+--signal dummy_vertices    : array_4x16_t;
 
-signal clear_fulfilled, clear_request, tet_drawn : std_logic;
+signal clear_fulfilled, clear_request, tet_drawn_sg, ready_to_start_sg : std_logic;
 
 -- test signal 
 signal pulse_counter : integer := 0;
@@ -99,7 +102,7 @@ signal pulse_counter : integer := 0;
 begin
 
 -- wire the controller
-controller : vga_controller 
+vga_control : vga_controller 
     Port Map(
         clk => clk_ext_port, -- uses the 100MHz FPGA clock
         video_on => video_on,
@@ -107,7 +110,7 @@ controller : vga_controller
         V_sync => VS_sig,
         pixel_x => pixel_x,
         pixel_y => pixel_y);
-datapath : framebuffer
+framebuff : framebuffer
     Port Map(clk => clk_ext_port,
           write_x => write_x,
           write_y => write_y,
@@ -119,47 +122,50 @@ datapath : framebuffer
           HS_in => HS_sig, 
           VS_in => VS_sig,
           
-          tet_drawn => tet_drawn,
+          tet_drawn => tet_drawn_sg,
           clear_request => clear_request,
           clear_fulfilled => clear_fulfilled,
-        
-        
+          ready_to_start    => ready_to_start_sg,
           VGA_HS => HS, -- final VS/HS
           VGA_VS => VS,
           VGA_out => color);
-manager : bresenham_receiver
+bres_rec : bresenham_receiver
     Port Map(
     clk => clk_ext_port,
-    new_vertices => dummy_nv,
-    vertices => dummy_vertices,
+    new_vertices => draw_new_points,
+    vertices => points,
     clear_request => clear_request,
     clear_fulfilled => clear_fulfilled,
-    tet_drawn => tet_drawn,
+    tet_drawn => tet_drawn_sg,
     load_mem => write_en,
     x => write_x,
     y => write_y
     );
-test_vertices: process(clk_ext_port)
-begin
-    if rising_edge(clk_ext_port) then
-        -- hold dummy vertices
-            dummy_vertices(0) <= x"d3a2";
-            dummy_vertices(1) <= x"d9a2";
-            dummy_vertices(2) <= x"d35d";
-            dummy_vertices(3) <= x"d95d";
 
-        -- increment counter
-        pulse_counter <= pulse_counter + 1;
+-- tie output signal 
+tet_drawn <= tet_drawn_sg;
+ready <= ready_to_start_sg;
+--test_vertices: process(clk_ext_port)
+--begin
+--    if rising_edge(clk_ext_port) then
+--        -- hold dummy vertices
+--            dummy_vertices(0) <= x"d3a2";
+--            dummy_vertices(1) <= x"d9a2";
+--            dummy_vertices(2) <= x"d35d";
+--            dummy_vertices(3) <= x"d95d";
 
-        -- generate one-clock pulse for new_vertices
-        if pulse_counter = 1000000 then  -- adjust for timing
-            dummy_nv <= '1';
-            pulse_counter <= 0;
-        else
-            dummy_nv <= '0';
-        end if;
-    end if;
-end process;
+--        -- increment counter
+--        pulse_counter <= pulse_counter + 1;
+
+--        -- generate one-clock pulse for new_vertices
+--        if pulse_counter = 1000000 then  -- adjust for timing
+--            dummy_nv <= '1';
+--            pulse_counter <= 0;
+--        else
+--            dummy_nv <= '0';
+--        end if;
+--    end if;
+--end process;
 
 -- PROBLEM POINT: 
 --dummy_vertices(0) <= x"2937";

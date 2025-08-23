@@ -26,7 +26,7 @@ use work.array_types.all;
 entity framebuffer is
     Port (clk                 :   in std_logic;
           clear_request       :   in std_logic; -- tells framebuffer to clear back 
-          tet_drawn           :   in std_logic; -- tells framebuffer bres is complete
+          tet_drawn           :   in std_logic; -- tells framebuffer tet is complete
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- address to write
           write_en            :   in std_logic;
           pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
@@ -34,7 +34,7 @@ entity framebuffer is
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
           VS_in               :   in std_logic;
-        
+          ready_to_start          :   out std_logic;
           clear_fulfilled     :   out std_logic; -- tells manager back buff is cleared
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
@@ -358,6 +358,8 @@ begin
     am_waiting <= '0';
     go_swap <= '0';
     case current_state is
+        when IDLE =>
+            ready_to_start <= '1';
         when CB =>
             clearing <= '1'; -- to clearing logic (local)
         when CLEARED =>
