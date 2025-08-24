@@ -41,17 +41,17 @@ begin
     elsif iter = 2 then 
       iter <= "00"; -- go back to low one cycle after  
     elsif load_port = '1' then 
-      if iter = 0 then 
+      if iter = "00" then 
         x48bus := resize(m, 48) * resize(x0, 48); 
+        x48bus := shift_right(x48bus, 17); 
         x48bus := resize(two_1112, 48) - x48bus; 
-        x48bus := shift_right(x48bus, 12); -- back to 11.12 
         x48bus := resize(x0, 48) * x48bus; 
         x1 <= shift_right(x48bus, 17);     -- 17 + 12 -> 12 
         iter <= iter + 1; 
-      else 
-        x48bus := resize(m, 48) * resize(x1, 48); 
+      elsif iter = "01" then 
+        x48bus := resize(m, 48) * resize(x1, 48);
+        x48bus := shift_right(x48bus, 12); 
         x48bus := resize(two_1112, 48) - x48bus; 
-        x48bus := shift_right(x48bus, 12); -- back to 11.12 
         x48bus := resize(x1, 48) * x48bus; 
         x2 <= shift_right(x48bus, 12);     -- 17 + 12 -> 12 
         iter <= iter + 1; 
@@ -61,7 +61,7 @@ begin
 end process newtons_method;
 
 --- enable set once iter goes high 
-set_port <= '1' when iter = 2 else '0'; 
-root <= std_logic_vector(iter);
+set_port <= '1' when iter = "10" else '0'; 
+root <= std_logic_vector(x2);
 
 end architecture behavioral;

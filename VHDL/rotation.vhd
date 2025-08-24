@@ -125,6 +125,13 @@ products(1) <= shift_right(mul48b(1), 14);
 products(2) <= shift_right(mul48b(2), 14); 
 products(3) <= shift_right(mul48b(3), 14); 
 
+process ( products ) 
+begin 
+  for i in 0 to 3 loop 
+    products_sg(i) <= std_logic_vector(products(i));
+  end loop; 
+end process; 
+
 buffer_enable: process ( clk_port )
 begin 
   if rising_edge( clk_port ) then 

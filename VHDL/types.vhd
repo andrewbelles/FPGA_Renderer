@@ -16,6 +16,8 @@ package array_types is
   type signed_2x24_t is array (0 to 1) of signed(23 downto 0);
   type signed_3x24_t is array (0 to 2) of signed(23 downto 0);
   type signed_4x24_t is array (0 to 3) of signed(23 downto 0);
+  type signed_3x48_t is array (0 to 2) of signed(47 downto 0);
+  type signed_4x48_t is array (0 to 3) of signed(47 downto 0);
   type array_2048x16_t is array(0 to 2047) of std_logic_vector(15 downto 0); -- sin lookup table
   type array_1024x24_t is array(0 to 1023) of std_logic_vector(23 downto 0); -- newtwon lookup table 
 

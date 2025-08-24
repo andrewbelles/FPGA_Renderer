@@ -32,8 +32,8 @@ end component reciprocal_24b;
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
   signal Xc, Yc         : signed(47 downto 0) := (others => '0');
 
-  constant m00          : signed(47 downto 0) := x"0000000014c9";
-  constant m11          : signed(47 downto 0) := x"000000001BB6";
+  constant m00          : signed(23 downto 0) := x"0014c9";
+  constant m11          : signed(23 downto 0) := x"001BB6";
   constant b            : signed(23 downto 0) := x"000080";
 begin 
 --------------------------------------------------------------------------
@@ -51,8 +51,8 @@ get_reciprocal: reciprocal_24b
 --------------------------------------------------------------------------
 -- Multiply Perspective Matrix against points  
 --------------------------------------------------------------------------
-Xc <= shift_right(m00 * resize(signed(x), 48), 12); 
-Yc <= shift_right(m11 * resize(signed(y), 48), 12); 
+Xc <= shift_right(resize(m00, 48) * resize(signed(x), 48), 12); 
+Yc <= shift_right(resize(m11, 48) * resize(signed(y), 48), 12); 
 Wc_reciprocal <= signed(reciprocal_sg);
 process( clk_port )
   variable round  : signed(23 downto 0) := x"000800"; 
