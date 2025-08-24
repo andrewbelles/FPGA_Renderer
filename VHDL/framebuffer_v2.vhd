@@ -26,7 +26,7 @@ use work.array_types.all;
 entity framebuffer is
     Port (clk                 :   in std_logic;
           clear_request       :   in std_logic; -- tells framebuffer to clear back 
-          tet_drawn           :   in std_logic; -- tells framebuffer bres is complete
+          tet_drawn           :   in std_logic; -- tells framebuffer tet is complete
           write_x, write_y    :   in std_logic_vector(7 downto 0); -- address to write
           write_en            :   in std_logic;
           pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
@@ -34,8 +34,9 @@ entity framebuffer is
           -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
           HS_in               :   in std_logic;
           VS_in               :   in std_logic;
-        
+          ready_to_draw      :   out std_logic;
           clear_fulfilled     :   out std_logic; -- tells manager back buff is cleared
+          done_drawing        :   out std_logic;
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
           VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 8 bit for an 8 bit color
@@ -94,7 +95,7 @@ signal pixel_x_delayed : std_logic_vector(39 downto 0);
 signal pixel_y_delayed : std_logic_vector(39 downto 0);
 
 -- FSM signals
-type state is (IDLE, CB, CLEARED, RECEIVE, WAITING, SWAP);
+type state is (IDLE, CB, CLEARED, RECEIVE, WAITING, SWAP, DONE);
 signal current_state, next_state : state := IDLE;
 
 signal clear_tc : std_logic; -- from logic to fsm to say that the local clear of back is at addr 2^16-1 (it is finished)
@@ -104,7 +105,6 @@ signal clearing : std_logic; -- from fsm to clearing logic says to start clearin
 signal receiving : std_logic; -- -- from fsm to logic to say that we are receiving and writing to memory
 signal am_waiting   : std_logic; -- from fsm to logic to say that we are waiting for blanking region
 signal go_swap         : std_logic; -- from fsm to logic to say to swap which one is drawing to vga
-
 
 begin
 
@@ -344,6 +344,8 @@ begin
                 next_state <= SWAP;
             end if;
         when SWAP => 
+            next_state <= DONE;
+        when DONE => 
             next_state <= IDLE;
         when others =>
             next_state <= IDLE;
@@ -357,17 +359,23 @@ begin
     receiving <= '0';
     am_waiting <= '0';
     go_swap <= '0';
+    done_drawing <= '0';
     case current_state is
+        when IDLE =>
+            ready_to_draw <= '1';
         when CB =>
             clearing <= '1'; -- to clearing logic (local)
         when CLEARED =>
-            clear_fulfilled <= '1'; -- to graphics manager
+            clear_fulfilled <= '1'; -- to bresenham_receiver
+            clear_fulfilled <= '1'; -- to bresenham_receiver
         when RECEIVE =>
             receiving <= '1';
         when WAITING =>
             am_waiting <= '1';
         when SWAP =>
             go_swap <= '1';
+        when DONE => 
+            done_drawing <= '1';
         when others =>
             null;
     end case;

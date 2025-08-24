@@ -46,6 +46,7 @@ signal bit_counter  : unsigned(3 downto 0) := (others => '0');  -- need 4 bits t
 signal baud_reset, bit_reset, shift_en : std_logic;
 signal baud_en, bit_inc : std_logic;
 signal tc_baud2, tc_baud, tc_bit : std_logic;
+-- for double synch input
 signal rx_delayed : std_logic_vector(1 downto 0);
 
 type state is (IDLE, WAIT_TC2, RECENTER_TIMING, WAIT_TC, SHIFT2, DATA_READY, DONE, WAIT_FOR_STOP);
@@ -53,7 +54,7 @@ signal current_state, next_state : state;
 
 begin
 
--- double synchronize input rx
+-- double synchronize input rx for safety
 synchronizing: process(clk)
 begin
     if(rising_edge(clk)) then

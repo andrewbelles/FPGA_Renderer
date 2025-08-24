@@ -32,11 +32,11 @@ library UNISIM;
 use UNISIM.VComponents.all;
 
 entity keyboard_7seg_test_shell is
-    Port ( clk_ext_port : in STD_LOGIC;
-           RsRx_ext_port       : in std_logic;
-           seg_ext_port : out std_logic_vector(0 to 6);
-           dp_ext_port  : out std_logic;
-           an_ext_port  : out std_logic_vector(3 downto 0)
+    Port ( clk_ext_port     : in STD_LOGIC;
+           RsRx_ext_port    : in std_logic;
+           seg_ext_port     : out std_logic_vector(0 to 6);
+           dp_ext_port      : out std_logic;
+           an_ext_port      : out std_logic_vector(3 downto 0)
            );
 end keyboard_7seg_test_shell;
 
@@ -111,13 +111,11 @@ clkgen: system_clock_generation
 -- 7 seg: 
 seg_ext_port <= seg_port;
 an_ext_port <= an_port;
---y0_port <= "0001";
---y1_port <= "0110";
+
 y2_port <= (others => '0');
 y3_port <= (others => '0');
 dp_set_port <= (others => '0'); 
 
--- purposely making a latch so that y0_port and y1_port are stable until next data_valid
 process(clk_ext_port)
 begin
     if(rising_edge(clk_ext_port)) then
