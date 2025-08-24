@@ -58,7 +58,7 @@ signal flip_buffer : std_logic := '0'; -- signal from FSM to flip buffer
 -- bresenham signals
 signal reset_bres, plot_bres, start_bres, done_bres :  std_logic := '0';
 signal x0_bres, y0_bres, x1_bres, y1_bres, x_bres, y_bres         : std_logic_vector(7 downto 0) := (others => '0');
-
+signal vertices_reg : array_4x16_t;
 
 
 type state is (IDLE, CB, ACTIVATE, COMPUTE, INC, DONE);
@@ -119,6 +119,11 @@ end process;
 --end process;
 
 -- assign the x_points and y_points into array so that can easily access them by index
+
+--store_verts : process(clk)
+--begin
+--    if(rising_edge(clk)) then
+--        if(
 load_pts: process(clk)
 begin
     if(rising_edge(clk)) then
