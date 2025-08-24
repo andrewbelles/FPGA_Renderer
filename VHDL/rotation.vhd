@@ -54,6 +54,7 @@ end component rotation_mul_24b;
   signal operands_sg     : array_3x24_t  := (others => (others => '0'));
   signal operands        : signed_3x24_t := (others => (others => '0'));
   signal products_sg     : array_4x24_t  := (others => (others => '0'));
+  signal mul48b          : signed_4x48_t := (others => (others => '0')); 
   signal products        : signed_4x24_t := (others => (others => '0'));
   signal cosine_set      : std_logic := '0'; 
   signal sine_set        : std_logic := '0';
@@ -114,10 +115,15 @@ begin
 end process set_load; 
 
 -- Once we've loaded operators and have trig values proceed with matmul
-products(0) <= operands(1) * signed(cosine); 
-products(1) <= operands(1) * signed(sine);
-products(2) <= operands(2) * signed(cosine);
-products(3) <= operands(2) * -signed(sine);
+mul48b(0) <= resize(operands(1), 48) * resize(signed(cosine), 48); 
+mul48b(1) <= resize(operands(1), 48) * resize(signed(sine), 48);
+mul48b(2) <= resize(operands(2), 48) * resize(signed(cosine), 48);
+mul48b(3) <= resize(operands(2), 48) * resize((-signed(sine)), 48);
+
+products(0) <= shift_right(mul48b(0), 14); 
+products(1) <= shift_right(mul48b(1), 14); 
+products(2) <= shift_right(mul48b(2), 14); 
+products(3) <= shift_right(mul48b(3), 14); 
 
 buffer_enable: process ( clk_port )
 begin 

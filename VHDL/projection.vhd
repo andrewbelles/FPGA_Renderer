@@ -30,10 +30,10 @@ end component reciprocal_24b;
   signal reciprocal_sg  : std_logic_vector(23 downto 0) := (others => '0'); 
   signal Wc_reciprocal  : signed(23 downto 0) := (others => '0');
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
-  signal Xc, Yc         : signed(23 downto 0) := (others => '0');
+  signal Xc, Yc         : signed(47 downto 0) := (others => '0');
 
-  constant m00          : signed(23 downto 0) := x"0014c9";
-  constant m11          : signed(23 downto 0) := x"001BB6";
+  constant m00          : signed(47 downto 0) := x"0000000014c9";
+  constant m11          : signed(47 downto 0) := x"000000001BB6";
   constant b            : signed(23 downto 0) := x"000080";
 begin 
 --------------------------------------------------------------------------
@@ -51,25 +51,29 @@ get_reciprocal: reciprocal_24b
 --------------------------------------------------------------------------
 -- Multiply Perspective Matrix against points  
 --------------------------------------------------------------------------
-Xc <= m00 * signed(x); 
-Yc <= m11 * signed(y); 
+Xc <= shift_right(m00 * resize(signed(x), 48), 12); 
+Yc <= shift_right(m11 * resize(signed(y), 48), 12); 
 Wc_reciprocal <= signed(reciprocal_sg);
 process( clk_port )
   variable round  : signed(23 downto 0) := x"000800"; 
   variable tx, ty : signed(23 downto 0) := (others => '0');
+  variable ndc_helper : signed(47 downto 0) := (others => '0'); 
 begin 
   round := x"000800";
   tx    := (others => '0'); 
   ty    := (others => '0');
+  ndc_helper := (others => '0'); 
 
   if rising_edge(clk_port) then 
     if reset_port = '1' then 
       xndc <= (others => '0');
       yndc <= (others => '0');
       divide_set <= '0';
-    elsif reciprocal_set = '1' then 
-      xndc <= Xc * Wc_reciprocal;
-      yndc <= Yc * Wc_reciprocal;
+    elsif reciprocal_set = '1' then
+      ndc_helper := Xc * resize(Wc_reciprocal, 48);  
+      xndc <= shift_right(ndc_helper, 12);
+      ndc_helper := Yc * resize(Wc_reciprocal, 48);  
+      yndc <= shift_right(ndc_helper, 12);
       divide_set <= '1'; 
     elsif divide_set = '1' then 
       tx := xndc; 

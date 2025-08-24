@@ -23,7 +23,7 @@ architecture behavioral of newton_24b is
   signal m      : signed(23 downto 0) := (others => '0');
 
 -- 2 represented as a 11.12 fixed point value 
-  constant two_1112    : signed(23 downto 0) := x"002000";
+  constant two_1112 : signed(23 downto 0) := x"002000";
 begin 
 
 -- load constant values
@@ -31,7 +31,9 @@ x0 <= signed(seed);
 m  <= signed(mantissa);
 
 newtons_method: process( clk_port ) 
+  variable x48bus : signed(47 downto 0) := (others => '0'); 
 begin 
+  x48bus := (others => '0'); 
   if rising_edge( clk_port ) then  
     if reset_port = '1' then 
       x1 <= (others => '0'); 
@@ -40,10 +42,18 @@ begin
       iter <= "00"; -- go back to low one cycle after  
     elsif load_port = '1' then 
       if iter = 0 then 
-        x1 <= x0 * (two_1112 - (m * x0)); 
+        x48bus := resize(m, 48) * resize(x0, 48); 
+        x48bus := resize(two_1112, 48) - x48bus; 
+        x48bus := shift_right(x48bus, 12); -- back to 11.12 
+        x48bus := resize(x0, 48) * x48bus; 
+        x1 <= shift_right(x48bus, 17);     -- 17 + 12 -> 12 
         iter <= iter + 1; 
       else 
-        x2 <= x1 * (two_1112 - (m * x1));
+        x48bus := resize(m, 48) * resize(x1, 48); 
+        x48bus := resize(two_1112, 48) - x48bus; 
+        x48bus := shift_right(x48bus, 12); -- back to 11.12 
+        x48bus := resize(x1, 48) * x48bus; 
+        x2 <= shift_right(x48bus, 12);     -- 17 + 12 -> 12 
         iter <= iter + 1; 
       end if; 
     end if; 
