@@ -36,6 +36,8 @@ end component update_point;
   signal update_done    : std_logic := '0';
 begin 
 
+-- Compute in series, proj3 waits for 1 and proj4 waits for 2 
+
 get_proj1: update_point 
 port map( 
   clk_port     => clk_port,  
@@ -69,10 +71,11 @@ port map(
   point_packet => local_packets(1),
   set_port     => update_set(1)); 
 
+-- doesn't get updated till update_set(0) goes high
 get_proj3: update_point 
 port map( 
   clk_port     => clk_port,  
-  load_port    => load_port, 
+  load_port    => update_set(0), 
   reset_port   => reset_port,  
   angle        => angle, 
   dir          => dir, 
@@ -85,11 +88,11 @@ port map(
   point_packet => local_packets(2),
   set_port     => update_set(2)); 
 
-
+-- same idea here, waits for update_set(1)
 get_proj4: update_point 
 port map( 
   clk_port     => clk_port,  
-  load_port    => load_port, 
+  load_port    => update_set(1), 
   reset_port   => reset_port,  
   angle        => angle, 
   dir          => dir, 
@@ -102,6 +105,7 @@ port map(
   point_packet => local_packets(3),
   set_port     => update_set(3)); 
 
+-- set_port goes high once all four have completed 
 update_done <= '1' when update_set = "1111" else '0';
 
 set_output: process( clk_port ) 
