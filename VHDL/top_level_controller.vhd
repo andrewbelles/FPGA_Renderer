@@ -201,8 +201,9 @@ begin
         when MATH =>
             start_math <= '1';
         when START_DRAW =>
-            reset_port_sg <= '1'; -- reset math for next time
             draw_new_points_sg <= '1';
+        when DRAW => 
+            reset_port_sg <= '1'; -- reset math for next time
         when others =>
             null;
     end case;
@@ -222,6 +223,7 @@ begin
             current_points <= new_points_sg;
         end if;
         
+        -- always activate if start_math 
         if(start_math = '1') then
            points_sg <= current_points;
            load_port_sg <= '1';
