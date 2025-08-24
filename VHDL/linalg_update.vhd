@@ -30,7 +30,7 @@ port(
   set_port   : out std_logic);
 end component rotation; 
 
-component projection is 
+component projection_24b is 
 port( 
   clk_port     : in std_logic;
   load_port    : in std_logic; 
@@ -38,7 +38,7 @@ port(
   x, y, z      : in std_logic_vector(23 downto 0); 
   point_packet : out std_logic_vector(15 downto 0); -- (8 high x),(8 low y)
   set_port     : out std_logic);
-end component projection;
+end component projection_24b;
 ----------------------- declarations -------------------------------------
   
   signal rx, ry, rz : std_logic_vector(23 downto 0) := (others => '0');
@@ -77,7 +77,7 @@ rot2: rotation
     nz         => oz,
     set_port   => rot2_set); 
 
-project: projection 
+project: projection_24b 
 port map( 
   clk_port     => clk_port, 
   load_port    => rot2_set, 

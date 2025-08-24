@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity projection is 
+entity projection_24b is 
 port( 
   clk_port     : in std_logic;
   load_port    : in std_logic; 
@@ -11,9 +11,9 @@ port(
   x, y, z      : in std_logic_vector(23 downto 0); 
   point_packet : out std_logic_vector(15 downto 0); -- (8 high x),(8 low y)
   set_port     : out std_logic);
-end projection; 
+end projection_24b; 
 
-architecture behavioral of projection is 
+architecture behavioral of projection_24b is 
 ----------------------- component declarations ---------------------------
 component reciprocal_24b 
   port (
@@ -25,6 +25,13 @@ component reciprocal_24b
     set_port   : out std_logic); 
 end component reciprocal_24b; 
 
+  type state_type is ( idle, wait_reciprocal, dividing, shift, done);
+  signal current_state, next_state : state_type := idle; 
+
+  signal reset_en       : std_logic := '0'; 
+  signal set_en         : std_logic := '0'; 
+  signal shift_en       : std_logic := '0'; 
+  signal shift_set      : std_logic := '0'; 
   signal reciprocal_en  : std_logic := '0'; 
   signal reciprocal_set : std_logic := '0'; 
   signal divide_en      : std_logic := '0'; 
@@ -32,9 +39,6 @@ end component reciprocal_24b;
   signal reciprocal_sg  : std_logic_vector(23 downto 0) := (others => '0'); 
   signal Wc_reciprocal  : signed(23 downto 0) := (others => '0');
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
-  signal x_reg          : std_logic_vector(23 downto 0) := (others => '0'); 
-  signal y_reg          : std_logic_vector(23 downto 0) := (others => '0'); 
-  signal z_reg          : std_logic_vector(23 downto 0) := (others => '0'); 
   signal Xc, Yc         : signed(23 downto 0) := (others => '0');
   signal Xc_wide        : signed(47 downto 0) := (others => '0');
   signal Yc_wide        : signed(47 downto 0) := (others => '0');
@@ -49,8 +53,8 @@ begin
 get_reciprocal: reciprocal_24b 
   port map( 
     clk_port   => clk_port, 
-    load_port  => load_port,
-    reset_port => reset_port, 
+    load_port  => reciprocal_en,
+    reset_port => reset_en, 
     value      => z,
     reciprocal => reciprocal_sg,
     set_port   => reciprocal_set);
@@ -65,17 +69,6 @@ Yc <= shift_right(Yc_wide, 12)(23 downto 0);
 Wc_reciprocal <= signed(reciprocal_sg) when reciprocal_set = '1' 
                  else (others => '0');
 
-process( clk_port ) 
-begin 
-  if rising_edge( clk_port ) then 
-    if reset_port = '1' then 
-      divide_en <= '0'; 
-    elsif reciprocal_set = '1' then 
-      divide_en <= '1'; 
-    end if; 
-  end if; 
-end process; 
-
 process( clk_port )
   variable round  : signed(23 downto 0) := x"000800"; 
   variable tx, ty : signed(23 downto 0) := (others => '0');
@@ -87,17 +80,18 @@ begin
   ndc_helper := (others => '0'); 
 
   if rising_edge(clk_port) then 
-    if reset_port = '1' then 
+    if reset_en = '1' then 
       xndc <= (others => '0');
       yndc <= (others => '0');
       divide_set <= '0';
+      shift_set  <= '0'; 
     elsif divide_en = '1' then
       ndc_helper := Xc * Wc_reciprocal;  
       xndc <= shift_right(ndc_helper, 12)(23 downto 0);
       ndc_helper := Yc * Wc_reciprocal;  
       yndc <= shift_right(ndc_helper, 12)(23 downto 0);
       divide_set <= '1'; 
-    elsif divide_set = '1' then 
+    elsif shift_en = '1' then 
       tx := xndc; 
       if tx(23) = '1' then 
         round := -round; 
@@ -113,10 +107,68 @@ begin
 
       -- latch point packet 
       point_packet <= std_logic_vector(ty(7 downto 0)) & std_logic_vector(tx(7 downto 0));
+      shift_set <= '1'; 
     end if; 
   end if; 
 end process;
 
-set_port <= '1' when divide_set = '1' else '0';
+set_port <= '1' when set_en = '1' else '0';
+
+next_state_logic: process ( current_state, reset_port, load_port, reciprocal_set, divide_set )
+begin 
+  if reset_port = '1' then 
+    next_state <= idle; 
+  else 
+    next_state <= current_state; 
+    case ( current_state ) is 
+      when idle => 
+        if load_port = '1' then 
+          next_state <= wait_reciprocal;
+        end if; 
+      when wait_reciprocal => 
+        if reciprocal_set = '1' then 
+          next_state <= dividing; 
+        end if; 
+      when dividing => 
+        if divide_set = '1' then 
+          next_state <= shift; 
+        end if; 
+      when shift => 
+        next_state <= done; 
+      when done => 
+      when others => 
+        null; 
+    end case; 
+  end if;
+end process next_state_logic; 
+
+output_logic: process( current_state )
+begin 
+  reset_en      <= '0'; 
+  reciprocal_en <= '0'; 
+  divide_en     <= '0'; 
+  shift_en      <= '0';
+  set_en        <= '0'; 
+
+  case ( current_state ) is 
+    when idle => 
+      reset_en <= '1'; 
+    when wait_reciprocal => 
+      reciprocal_en <= '1'; 
+    when dividing => 
+      divide_en <= '1'; 
+    when shift => 
+      shift_en <= '1';
+    when done => 
+      set_en <= '1'; 
+  end case; 
+end process output_logic; 
+
+update_state: process( clk_port ) 
+begin
+    if rising_edge( clk_port ) then
+        current_state <= next_state;
+    end if;
+end process update_state;
 
 end architecture behavioral;
