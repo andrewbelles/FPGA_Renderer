@@ -6,6 +6,7 @@ use work.array_types.all;
 entity rotation is 
 port( 
   clk_port   : in std_logic;
+  en_port    : in std_logic; 
   reset_port : in std_logic; 
   angle      : in std_logic_vector(15 downto 0);
   dir        : in std_logic_vector(1 downto 0);
@@ -70,6 +71,7 @@ end component rotation_mul_24b;
   signal rotation_load   : std_logic := '0'; 
   signal products_set    : std_logic_vector(3 downto 0) := (others => '0');
   signal products        : array_4x24_t := (others => (others => '0'));
+  signal update_set      : std_logic := '0';
 
 -- constants 
   -- digit counts 
@@ -118,10 +120,11 @@ begin
 end process invert_sine; 
 
 -- sets load_en once all values are set, pulled from rom 
-set_load: process( sine_set, cosine_set, operand_set )
+set_load: process( en_port, sine_set, cosine_set, operand_set )
 begin 
   multiplier_load <= '0';
-  if (sine_set = '1' and cosine_set = '1' and operand_set = '1') then 
+  if (en_port = '1' and sine_set = '1'
+      and cosine_set = '1' and operand_set = '1') then 
     multiplier_load <= '1';
   end if;
 end process set_load; 
@@ -199,6 +202,19 @@ update_point: rotation_mul_24b
     nx       => nx, 
     ny       => ny, 
     nz       => nz, 
-    set_port => set_port); 
+    set_port => update_set); 
+
+process( clk_port ) 
+begin 
+  if rising_edge( clk_port ) then 
+    if reset_port = '1' then 
+      set_port <= '0'; 
+    elsif update_set = '1' then 
+      set_port <= '1';
+    else 
+      set_port <= '0'; 
+    end if; 
+  end if; 
+end process; 
 
 end behavioral; 
