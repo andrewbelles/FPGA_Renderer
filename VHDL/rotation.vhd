@@ -107,11 +107,13 @@ end process invert_sine;
 -- sets load_en once all values are set, pulled from rom 
 set_load: process( clk_port )
 begin 
-  multiplier_load <= '0';
   if rising_edge(clk_port) then
     if (en_port = '1' and sine_set = '1'
         and cosine_set = '1' and operand_set = '1') then 
       multiplier_load <= '1';
+      for i in 0 to 2 loop  
+        operands(i) <= signed(operands_sg(i));
+      end loop; 
     end if;
   end if; 
 end process set_load; 

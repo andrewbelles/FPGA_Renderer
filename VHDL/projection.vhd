@@ -27,6 +27,7 @@ end component reciprocal_24b;
 
   signal reciprocal_en  : std_logic := '0'; 
   signal reciprocal_set : std_logic := '0'; 
+  signal divide_en      : std_logic := '0'; 
   signal divide_set     : std_logic := '0';
   signal reciprocal_sg  : std_logic_vector(23 downto 0) := (others => '0'); 
   signal Wc_reciprocal  : signed(23 downto 0) := (others => '0');
@@ -48,38 +49,32 @@ begin
 get_reciprocal: reciprocal_24b 
   port map( 
     clk_port   => clk_port, 
-    load_port  => reciprocal_en,
+    load_port  => load_port,
     reset_port => reset_port, 
-    value      => z_reg,
+    value      => z,
     reciprocal => reciprocal_sg,
     set_port   => reciprocal_set);
 
 --------------------------------------------------------------------------
 -- Multiply Perspective Matrix against points  
 --------------------------------------------------------------------------
-input_regs: process( clk_port ) 
-begin 
-  if rising_edge( clk_port ) then 
-    if reset_port = '1' then 
-      reciprocal_en <= '0'; 
-      x_reg <= (others => '0'); 
-      y_reg <= (others => '0'); 
-      z_reg <= (others => '0'); 
-    elsif load_port = '1' then 
-      reciprocal_en <= '1'; 
-      x_reg <= x; 
-      y_reg <= y; 
-      z_reg <= z; 
-    end if; 
-  end if; 
-end process input_regs; 
-
-Xc_wide <= m00 * signed(x_reg); 
-Yc_wide <= m11 * signed(y_reg); 
+Xc_wide <= m00 * signed(x); 
+Yc_wide <= m11 * signed(y); 
 Xc <= shift_right(Xc_wide, 12)(23 downto 0); 
 Yc <= shift_right(Yc_wide, 12)(23 downto 0); 
 Wc_reciprocal <= signed(reciprocal_sg) when reciprocal_set = '1' 
                  else (others => '0');
+
+process( clk_port ) 
+begin 
+  if rising_edge( clk_port ) then 
+    if reset_port = '1' then 
+      divide_en <= '0'; 
+    elsif reciprocal_set = '1' then 
+      divide_en <= '1'; 
+    end if; 
+  end if; 
+end process; 
 
 process( clk_port )
   variable round  : signed(23 downto 0) := x"000800"; 
@@ -96,7 +91,7 @@ begin
       xndc <= (others => '0');
       yndc <= (others => '0');
       divide_set <= '0';
-    elsif reciprocal_set = '1' then
+    elsif divide_en = '1' then
       ndc_helper := Xc * Wc_reciprocal;  
       xndc <= shift_right(ndc_helper, 12)(23 downto 0);
       ndc_helper := Yc * Wc_reciprocal;  
@@ -117,8 +112,7 @@ begin
       ty := shift_right( shift_left(ty, 7) + round, 12) + b;
 
       -- latch point packet 
-      point_packet <= std_logic_vector(ty(7 downto 0)) 
-                      & std_logic_vector(tx(7 downto 0));
+      point_packet <= std_logic_vector(ty(7 downto 0)) & std_logic_vector(tx(7 downto 0));
     end if; 
   end if; 
 end process;
