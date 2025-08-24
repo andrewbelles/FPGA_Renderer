@@ -97,9 +97,9 @@ begin
       yndc <= (others => '0');
       divide_set <= '0';
     elsif reciprocal_set = '1' then
-      ndc_helper := Xc * resize(Wc_reciprocal, 48);  
+      ndc_helper := Xc * Wc_reciprocal;  
       xndc <= shift_right(ndc_helper, 12);
-      ndc_helper := Yc * resize(Wc_reciprocal, 48);  
+      ndc_helper := Yc * Wc_reciprocal;  
       yndc <= shift_right(ndc_helper, 12);
       divide_set <= '1'; 
     elsif divide_set = '1' then 

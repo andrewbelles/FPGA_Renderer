@@ -50,11 +50,11 @@ begin
         x1 <= shift_right(x48bus, 17)(23 downto 0); -- 17 + 12 -> 12 
         counter <= counter + 1; 
       elsif counter = "01" then 
-        x48bus := m * x0; 
+        x48bus := m * x1; 
         x24bus := shift_right(x48bus, 12)(23 downto 0); 
         x24bus := two_1112 - x24bus; 
-        x48bus := x0 * x24bus; 
-        x1 <= shift_right(x48bus, 12)(23 downto 0); -- 17 + 12 -> 12 
+        x48bus := x1 * x24bus; 
+        x2 <= shift_right(x48bus, 12)(23 downto 0); -- 17 + 12 -> 12 
         counter <= counter + 1; 
       end if; 
     end if; 
