@@ -35,18 +35,6 @@ component set_operands_m24x24 is
     set_port : out std_logic);
 end component set_operands_m24x24;
 
-component multiplier_24x24
-  port (
-    clk_port     : in std_logic;
-    load_port    : in std_logic; 
-    reset_port   : in std_logic; 
-    A, B         : in std_logic_vector(23 downto 0);
-    A_dig, B_dig : in std_logic_vector(4 downto 0);
-    AB           : out std_logic_vector(23 downto 0);
-    AB_dig       : out std_logic_vector(4 downto 0);
-    set_port     : out std_logic);
-end component multiplier_24x24; 
-
 component rotation_mul_24b is 
   port (
     clk_port   : in std_logic; 
@@ -63,20 +51,16 @@ end component rotation_mul_24b;
   signal sine, cosine    : std_logic_vector(23 downto 0) := (others => '0');
   signal sin16, cos16    : std_logic_vector(15 downto 0) := (others => '0'); 
   signal inv_sine        : std_logic_vector(23 downto 0) := (others => '0');
-  signal operands        : array_3x24_t := (others => (others => '0'));
+  signal operands_sg     : array_3x24_t  := (others => (others => '0'));
+  signal operands        : signed_3x24_t := (others => (others => '0'));
+  signal products_sg     : array_4x24_t  := (others => (others => '0'));
+  signal products        : signed_4x24_t := (others => (others => '0'));
   signal cosine_set      : std_logic := '0'; 
   signal sine_set        : std_logic := '0';
   signal operand_set     : std_logic := '0'; 
   signal multiplier_load : std_logic := '0'; 
   signal rotation_load   : std_logic := '0'; 
-  signal products_set    : std_logic_vector(3 downto 0) := (others => '0');
-  signal products        : array_4x24_t := (others => (others => '0'));
   signal update_set      : std_logic := '0';
-
--- constants 
-  -- digit counts 
-  constant dig14 : std_logic_vector(4 downto 0)  := "01110";
-  constant dig12  : std_logic_vector(4 downto 0) := "01100";
 begin 
 
 get_sin: sine_lut
@@ -102,7 +86,7 @@ get_operands: set_operands_m24x24
     x        => x, 
     y        => y, 
     z        => z, 
-    operands => operands, 
+    operands => operands_sg, 
     set_port => operand_set); 
 
 zero_extend_trig: process( sin16, cos16 )
@@ -130,75 +114,31 @@ begin
 end process set_load; 
 
 -- Once we've loaded operators and have trig values proceed with matmul
+products(0) <= operands(1) * signed(cosine); 
+products(1) <= operands(1) * signed(sine);
+products(2) <= operands(2) * signed(cosine);
+products(3) <= operands(2) * -signed(sine);
 
-prod1: multiplier_24x24
-  port map(
-    clk_port   => clk_port, 
-    load_port  => multiplier_load, 
-    reset_port => reset_port,
-    A          => operands(1),
-    B          => cosine,
-    A_dig      => dig12,
-    B_dig      => dig14,
-    AB         => products(0), 
-    AB_dig     => OPEN,
-    set_port   => products_set(0));
-
-prod2: multiplier_24x24
-  port map(
-    clk_port   => clk_port, 
-    load_port  => multiplier_load, 
-    reset_port => reset_port,
-    A          => operands(1),
-    B          => sine,
-    A_dig      => dig12,
-    B_dig      => dig14,
-    AB         => products(1), 
-    AB_dig     => OPEN,
-    set_port   => products_set(1));
-
-prod3: multiplier_24x24
-  port map(
-    clk_port   => clk_port, 
-    load_port  => multiplier_load, 
-    reset_port => reset_port,
-    A          => operands(2),
-    B          => cosine,
-    A_dig      => dig12,
-    B_dig      => dig14,
-    AB         => products(2), 
-    AB_dig     => OPEN,
-    set_port   => products_set(2));
-
-prod4: multiplier_24x24
-  port map(
-    clk_port   => clk_port, 
-    load_port  => multiplier_load, 
-    reset_port => reset_port,
-    A          => operands(2),
-    B          => inv_sine,
-    A_dig      => dig12,
-    B_dig      => dig14,
-    AB         => products(3), 
-    AB_dig     => OPEN,
-    set_port   => products_set(3));
-
--- all products must assert completed for rotation to be executed 
-set_rotation_load: process( products_set )
+buffer_enable: process ( clk_port )
 begin 
-  rotation_load <= '0';
-  if products_set = "1111" then 
-    rotation_load <= '1';
+  if rising_edge( clk_port ) then 
+    if reset_port = '1' then 
+      rotation_load <= '0'; 
+    elsif en_port = '1' then 
+      rotation_load <= '1'; 
+    else 
+      rotation_load <= '0';
+    end if; 
   end if; 
-end process set_rotation_load; 
+end process buffer_enable;
 
 update_point: rotation_mul_24b 
   port map(
     clk_port => clk_port,
     load_en  => rotation_load, 
     dir      => dir, 
-    static   => operands(0),
-    products => products, 
+    static   => operands_sg(0),
+    products => products_sg, 
     nx       => nx, 
     ny       => ny, 
     nz       => nz, 
