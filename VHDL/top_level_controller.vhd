@@ -49,16 +49,16 @@ component uart_receiver is
 end component;
 
 component graphics_manager is
-    Port ( clk_ext_port	  : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
-       points         : in array_4x16_t;
+    Port ( clk_ext_port	   : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
+       points              : in array_4x16_t;
        draw_new_points     : in std_logic;
-       tet_drawn      : out std_logic;
-       can_draw     : out std_logic;
-       red            : out std_logic_vector(3 downto 0);
-       green          : out std_logic_vector(3 downto 0);
-       blue           : out std_logic_vector(3 downto 0);
-       HS             : out std_logic;
-       VS             : out std_logic);
+       ready_to_draw            : out std_logic;
+       done_drawing             : out std_logic;
+       red                 : out std_logic_vector(3 downto 0);
+       green               : out std_logic_vector(3 downto 0);
+       blue                : out std_logic_vector(3 downto 0);
+       HS                  : out std_logic;
+       VS                  : out std_logic);
 end component;
 component parallel_math is
     port( 
@@ -82,10 +82,10 @@ signal load_port, reset_port, set_port : std_logic;
 signal angle : array_2x16_t;
 signal dir : array_2x2_t;
 signal points_sg : array_4x3x24_t; 
-signal new_points_sg : std_logic;
+signal draw_new_points_sg : std_logic;
 signal packets_sg : array_4x16_t;                 -- currently sending these to graphics
-signal tet_drawn_sg, can_draw_sg : std_logic;
-
+signal ready_to_draw_sg, done_drawing_sg : std_logic;
+signal new_points_unused : array_4x3x24_t;
 type state is (INIT, IDLE, MAP_PRESS, MATH, WAIT_SCREEN, DRAW);
 signal next_state, current_state : state := INIT;
 begin
@@ -98,9 +98,9 @@ rec : uart_receiver
 graphics_man : graphics_manager
     Port Map(clk_ext_port => clk_ext_port,
          points      => packets_sg,
-         draw_new_points  => new_points_sg, 
-         tet_drawn => tet_drawn_sg,
-         can_draw => can_draw_sg,
+         draw_new_points  => draw_new_points_sg, 
+         ready_to_draw => ready_to_draw_sg,
+         done_drawing  => done_drawing_sg,
          red => red_sg,
          green => green_sg,
          blue => blue_sg,
@@ -114,7 +114,7 @@ math_man : parallel_math
              angle => angle,
              dir => dir,
              points => points_sg, 
-             new_points => , -- will be unused since we are using packets???
+             new_points => new_points_unused , -- will be unused since we are using packets???
              packets => packets_sg,
              set_port => set_port);
 
@@ -141,16 +141,17 @@ begin
         when MAP_PRESS =>
             next_state <= MATH;
         when MATH => 
-            if(set_port = '1') then  -- ANDY IS THIS RIGHT? DOES SET PORT MEAN YOU HAVE NEW POINTS THAT ARE VALID
+            if(set_port = '1') then
                 next_state <= WAIT_SCREEN;
             end if;
         when WAIT_SCREEN =>
-            if(can_draw_sg = '1') then
+            if(ready_to_draw_sg = '1') then
                 next_state <= DRAW;
             end if;
         when DRAW =>
-
-            
+            if(done_drawing_sg = '1') then
+                next_state <= IDLE;
+            end if;
         when others =>
             next_state <= IDLE;
     end case;

@@ -28,8 +28,8 @@ entity graphics_manager is
 Port ( clk_ext_port	  : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
        points         : in array_4x16_t;
        draw_new_points     : in std_logic;
-       tet_drawn      : out std_logic;
-       can_draw            : out std_logic;
+       ready_to_draw       : out std_logic;
+       done_drawing        : out std_logic;
        red            : out std_logic_vector(3 downto 0);
        green          : out std_logic_vector(3 downto 0);
        blue           : out std_logic_vector(3 downto 0);
@@ -50,23 +50,22 @@ component vga_controller is
 end component;
 
 component framebuffer is
-      Port (clk               :   in std_logic;
-          write_x, write_y    :   in std_logic_vector(7 downto 0); -- addess to write
-          write_en            :   in std_logic;
-          pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
-          video_on            :   in std_logic;
-          -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
-          HS_in               :   in std_logic;
-          VS_in               :   in std_logic;
-        
-          VGA_HS              :   out std_logic;
-          VGA_VS              :   out std_logic;
-          VGA_out             :   out std_logic_vector(11 downto 0); -- framebuffer data
-          
-          clear_fulfilled : out std_logic;
-          clear_request : in std_logic;
-          tet_drawn : in std_logic;
-          ready_to_start : out std_logic
+        Port (clk                 :   in std_logic;
+              clear_request       :   in std_logic; -- tells framebuffer to clear back 
+              tet_drawn           :   in std_logic; -- tells framebuffer tet is complete
+              write_x, write_y    :   in std_logic_vector(7 downto 0); -- address to write
+              write_en            :   in std_logic;
+              pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
+              video_on            :   in std_logic;
+              -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
+              HS_in               :   in std_logic;
+              VS_in               :   in std_logic;
+              ready_to_draw       :   out std_logic;
+              clear_fulfilled     :   out std_logic; -- tells manager back buff is cleared
+              done_drawing        :   out std_logic;
+              VGA_HS              :   out std_logic;
+              VGA_VS              :   out std_logic;
+              VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 8 bit for an 8 bit color
            );
 end component;
 
@@ -94,7 +93,7 @@ signal pixel_x, pixel_y  : std_logic_vector(9 downto 0);
 --signal dummy_nv          : std_logic;
 --signal dummy_vertices    : array_4x16_t;
 
-signal clear_fulfilled, clear_request, tet_drawn_sg, ready_to_start_sg : std_logic;
+signal clear_fulfilled, clear_request, tet_drawn_sg, ready_to_draw_sg, done_drawing_sg : std_logic;
 
 -- test signal 
 signal pulse_counter : integer := 0;
@@ -125,7 +124,8 @@ framebuff : framebuffer
           tet_drawn => tet_drawn_sg,
           clear_request => clear_request,
           clear_fulfilled => clear_fulfilled,
-          ready_to_start    => ready_to_start_sg,
+          ready_to_draw    => ready_to_draw_sg,
+          done_drawing    => done_drawing_sg,
           VGA_HS => HS, -- final VS/HS
           VGA_VS => VS,
           VGA_out => color);
@@ -143,8 +143,8 @@ bres_rec : bresenham_receiver
     );
 
 -- tie output signal 
-tet_drawn <= tet_drawn_sg;
-ready <= ready_to_start_sg;
+ready_to_draw <= ready_to_draw_sg;
+done_drawing <= done_drawing_sg;
 --test_vertices: process(clk_ext_port)
 --begin
 --    if rising_edge(clk_ext_port) then
