@@ -105,20 +105,33 @@ begin
 end process invert_sine; 
 
 -- sets load_en once all values are set, pulled from rom 
-set_load: process( en_port, sine_set, cosine_set, operand_set )
+set_load: process( clk_port )
 begin 
   multiplier_load <= '0';
-  if (en_port = '1' and sine_set = '1'
-      and cosine_set = '1' and operand_set = '1') then 
-    multiplier_load <= '1';
-  end if;
+  if rising_edge(clk_port) then
+    if (en_port = '1' and sine_set = '1'
+        and cosine_set = '1' and operand_set = '1') then 
+      multiplier_load <= '1';
+    end if;
+  end if; 
 end process set_load; 
 
 -- Once we've loaded operators and have trig values proceed with matmul
-mul48b(0) <= operands(1) * signed(cosine); 
-mul48b(1) <= operands(1) * signed(sine);
-mul48b(2) <= operands(2) * signed(cosine);
-mul48b(3) <= operands(2) * (-signed(sine));
+process ( clk_port ) 
+begin 
+  if rising_edge( clk_port ) then 
+    if reset_port = '1' then 
+      mul48b <= (others => (others => '0')); 
+      rotation_load <= '0'; 
+    elsif multiplier_load = '1' then 
+      rotation_load <= '1'; 
+      mul48b(0) <= operands(1) * signed(cosine); 
+      mul48b(1) <= operands(1) * signed(sine);
+      mul48b(2) <= operands(2) * signed(cosine);
+      mul48b(3) <= operands(2) * (-signed(sine));
+    end if; 
+  end if; 
+end process; 
 
 process ( mul48b ) 
 begin 
@@ -133,19 +146,6 @@ begin
     products_sg(i) <= std_logic_vector(products(i));
   end loop; 
 end process; 
-
-buffer_enable: process ( clk_port )
-begin 
-  if rising_edge( clk_port ) then 
-    if reset_port = '1' then 
-      rotation_load <= '0'; 
-    elsif en_port = '1' then 
-      rotation_load <= '1'; 
-    else 
-      rotation_load <= '0';
-    end if; 
-  end if; 
-end process buffer_enable;
 
 update_point: rotation_mul_24b 
   port map(

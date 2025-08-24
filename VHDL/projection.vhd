@@ -98,9 +98,9 @@ begin
       divide_set <= '0';
     elsif reciprocal_set = '1' then
       ndc_helper := Xc * Wc_reciprocal;  
-      xndc <= shift_right(ndc_helper, 12);
+      xndc <= shift_right(ndc_helper, 12)(23 downto 0);
       ndc_helper := Yc * Wc_reciprocal;  
-      yndc <= shift_right(ndc_helper, 12);
+      yndc <= shift_right(ndc_helper, 12)(23 downto 0);
       divide_set <= '1'; 
     elsif divide_set = '1' then 
       tx := xndc; 
