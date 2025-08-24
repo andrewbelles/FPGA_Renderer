@@ -115,15 +115,17 @@ begin
 end process set_load; 
 
 -- Once we've loaded operators and have trig values proceed with matmul
-mul48b(0) <= resize(operands(1), 48) * resize(signed(cosine), 48); 
-mul48b(1) <= resize(operands(1), 48) * resize(signed(sine), 48);
-mul48b(2) <= resize(operands(2), 48) * resize(signed(cosine), 48);
-mul48b(3) <= resize(operands(2), 48) * resize((-signed(sine)), 48);
+mul48b(0) <= operands(1) * signed(cosine); 
+mul48b(1) <= operands(1) * signed(sine);
+mul48b(2) <= operands(2) * signed(cosine);
+mul48b(3) <= operands(2) * (-signed(sine));
 
-products(0) <= shift_right(mul48b(0), 14); 
-products(1) <= shift_right(mul48b(1), 14); 
-products(2) <= shift_right(mul48b(2), 14); 
-products(3) <= shift_right(mul48b(3), 14); 
+process ( mul48b ) 
+begin 
+  for i in 0 to 3 loop 
+    products(i) <= shift_right(mul48b(i), 14)(23 downto 0);   
+  end loop; 
+end process; 
 
 process ( products ) 
 begin 

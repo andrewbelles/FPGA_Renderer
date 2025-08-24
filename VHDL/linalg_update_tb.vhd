@@ -58,13 +58,13 @@ end process clock_proc;
 stim_proc: process 
 begin 
   load_port <= '1'; 
-  x <= x"FF6000";      -- -10 
-  y <= x"FF6000";      -- -10 
-  z <= x"FD8000";      -- -40
+  x <= x"014000";      -- -10 
+  y <= x"fec000";      -- -10 
+  z <= x"fec000";      -- -40
   angle(0) <= x"0861"; --  30
-  angle(1) <= x"1922"; --  90
-  dir(0)   <= "00";    -- x
-  dir(1)   <= "01";    -- y 
+  angle(1) <= x"0430"; --  90
+  dir(0)   <= "01";    -- x
+  dir(1)   <= "00";    -- y 
   wait for 200*clk_period; 
 
   load_port  <= '0';
