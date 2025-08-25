@@ -70,32 +70,33 @@ clk <= '1';
 wait for CLK_PERIOD / 2;
 end process;
 
---stim: process
---begin
+stim: process
+begin
 ---- note since clk period and buad period dont line up, no need to shift starting
-
---    wait for BAUD_PERIOD; 
---    -- start bit (0)
---    rx <= '0';
---    wait for BAUD_PERIOD;
---    -- first data bit
---    rx <= '1';
---    wait for BAUD_PERIOD;
---    rx <= '0';
---    wait for BAUD_PERIOD;
---    rx <= '0';
---    wait for BAUD_PERIOD;
---    rx <= '0';
---    wait for BAUD_PERIOD;
---    rx <= '0';
---    wait for BAUD_PERIOD;
---    rx <= '0';
---    wait for BAUD_PERIOD;
---    rx <= '1';
---    wait for BAUD_PERIOD;
---    rx <= '1';
---    wait for BAUD_PERIOD;
---    -- stop bit (1)
---    rx <= '1';
---    wait;
+    wait for 29 ms;
+    wait for BAUD_PERIOD; 
+    -- start bit (0)
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    -- first data bit
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    -- stop bit (1)
+    rx <= '1';
+    wait;
+END PROCESS;
 end Behavioral;

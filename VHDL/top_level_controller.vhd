@@ -99,7 +99,7 @@ signal angle_sg : array_2x16_t;
 signal dir_sg : array_2x2_t;
 signal points_sg : array_4x3x24_t; 
 signal draw_new_points_sg : std_logic := '0';
-signal packets_sg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
+signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
 signal ready_to_draw_sg, done_drawing_sg : std_logic;
 signal new_points_sg : array_4x3x24_t;
 
@@ -125,7 +125,7 @@ rec : uart_receiver
 
 graphics_man : graphics_manager
     Port Map(sys_clk => sys_clk,
-         points      => packets_sg,
+         points      => packets_reg,
          draw_new_points  => draw_new_points_sg, 
          ready_to_draw => ready_to_draw_sg,
          done_drawing  => done_drawing_sg,
@@ -141,7 +141,7 @@ math_man : parallel_math
              reset_port => reset_port_sg,
              angle => angle_sg,
              dir => dir_sg,
-             points => points_sg, 
+             points => current_points, 
              new_points => new_points_sg, 
              packets => packets_sg,
              set_port => set_port_sg);
@@ -152,6 +152,16 @@ angle_dir: angle_dir_lut
              dirs => dir_sg,
              angles => angle_sg,
              lut_ready => lut_ready);
+             
+             
+process(sys_clk)
+begin
+    if(rising_edge(sys_clk)) then
+        if(set_port_sg = '1') then
+            packets_reg <= packets_sg;
+        end if;
+    end if;
+end process;
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------    
 -- FSM controller
 state_update : process(sys_clk) 
@@ -201,18 +211,24 @@ output_logic : process(current_state)
 begin
     init_control <= '0';
     map_press_control <= '0';
-    start_math <= '0';
+    load_port_sg <= '0';
     reset_port_sg <= '0';
     draw_new_points_sg <= '0';
     case current_state is
         when INIT =>
             init_control <= '1';
+        when IDLE =>
+            reset_port_sg <= '1';
         when MAP_PRESS =>
             map_press_control <= '1';
+            reset_port_sg <= '1';
         when MATH =>
-            start_math <= '1';
+            load_port_sg <= '1';
+        when WAIT_SCREEN =>
+            reset_port_sg <= '1';
         when START_DRAW =>
             draw_new_points_sg <= '1';
+            reset_port_sg <= '1';
         when DRAW => 
             reset_port_sg <= '1'; -- reset math for next time
         when others =>
@@ -223,7 +239,6 @@ end process;
 point_proc : process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
-        load_port_sg <= '0';
         if(init_control = '1') then
             current_points(0)(0 to 2) <= (x"032000", x"032000", x"00A000");
             current_points(1)(0 to 2) <= (x"032000", x"FCE000", x"FF6000");
@@ -232,12 +247,6 @@ begin
         -- update current_points when done with math
         elsif(set_port_sg = '1') then
             current_points <= new_points_sg;
-        end if;
-        
-        -- always activate if start_math 
-        if(start_math = '1') then
-           points_sg <= current_points;
-           load_port_sg <= '1';
         end if;
     end if;
 end process;
