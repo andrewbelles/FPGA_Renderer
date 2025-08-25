@@ -25,10 +25,12 @@ component reciprocal_24b
     set_port   : out std_logic); 
 end component reciprocal_24b; 
 
-  type state_type is ( idle, wait_reciprocal, dividing, shift, done);
+  type state_type is ( idle, load, wait_reciprocal, load_reciprocal, dividing, shift, done);
   signal current_state, next_state : state_type := idle; 
 
+  signal load_rec_en    : std_logic := '0'; 
   signal reset_en       : std_logic := '0'; 
+  signal load_en        : std_logic := '0'; 
   signal set_en         : std_logic := '0'; 
   signal shift_en       : std_logic := '0'; 
   signal shift_set      : std_logic := '0'; 
@@ -62,12 +64,34 @@ get_reciprocal: reciprocal_24b
 --------------------------------------------------------------------------
 -- Multiply Perspective Matrix against points  
 --------------------------------------------------------------------------
-Xc_wide <= m00 * signed(x); 
-Yc_wide <= m11 * signed(y); 
-Xc <= shift_right(Xc_wide, 12)(23 downto 0); 
-Yc <= shift_right(Yc_wide, 12)(23 downto 0); 
-Wc_reciprocal <= signed(reciprocal_sg) when reciprocal_set = '1' 
-                 else (others => '0');
+process( clk_port )
+  variable wide_bus : signed(47 downto 0); 
+begin
+  wide_bus := (others => '0'); 
+  if rising_edge( clk_port ) then 
+    if reset_en = '1' then 
+      Xc <= (others => '0');
+      Yc <= (others => '0');
+    elsif load_en = '1' then 
+      wide_bus := m00 * signed(x); 
+      Xc <= shift_right(wide_bus, 12)(23 downto 0); 
+      wide_bus := m11 * signed(y);
+      Yc <= shift_right(wide_bus, 12)(23 downto 0); 
+    end if;  
+  end if; 
+end process; 
+
+process( clk_port ) 
+begin 
+  if rising_edge(clk_port) then 
+    if reset_en = '1' then 
+      Wc_reciprocal <= (others => '0'); 
+    elsif load_rec_en = '1' then 
+      Wc_reciprocal <= signed(reciprocal_sg); 
+    end if; 
+  end if; 
+end process; 
+
 
 process( clk_port )
   variable round  : signed(23 downto 0) := x"000800"; 
@@ -123,19 +147,26 @@ begin
     case ( current_state ) is 
       when idle => 
         if load_port = '1' then 
-          next_state <= wait_reciprocal;
+          next_state <= load;
         end if; 
+      when load => 
+        next_state <= wait_reciprocal; 
       when wait_reciprocal => 
         if reciprocal_set = '1' then 
-          next_state <= dividing; 
+          next_state <= load_reciprocal; 
         end if; 
+      when load_reciprocal => 
+        next_state <= dividing;         
       when dividing => 
         if divide_set = '1' then 
           next_state <= shift; 
         end if; 
       when shift => 
-        next_state <= done; 
+        if shift_set = '1' then 
+          next_state <= done; 
+        end if; 
       when done => 
+        next_state <= done; -- stay in done till reset(?)
       when others => 
         null; 
     end case; 
@@ -145,16 +176,22 @@ end process next_state_logic;
 output_logic: process( current_state )
 begin 
   reset_en      <= '0'; 
+  load_en       <= '0'; 
   reciprocal_en <= '0'; 
   divide_en     <= '0'; 
   shift_en      <= '0';
   set_en        <= '0'; 
+  load_rec_en   <= '0';
 
   case ( current_state ) is 
     when idle => 
       reset_en <= '1'; 
+    when load => 
+      load_en <= '1'; 
     when wait_reciprocal => 
-      reciprocal_en <= '1'; 
+      reciprocal_en <= '1';
+    when load_reciprocal => 
+      load_rec_en <= '1';  
     when dividing => 
       divide_en <= '1'; 
     when shift => 

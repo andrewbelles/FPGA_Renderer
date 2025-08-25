@@ -9,7 +9,7 @@ entity reciprocal_24b is
     load_port  : in std_logic;
     reset_port : in std_logic; 
     value      : in std_logic_vector(23 downto 0);    -- q11.12 value to mul invert    
-    reciprocal : out std_logic_vector(23 downto 0); -- q6.17 reciprocal 
+    reciprocal : out std_logic_vector(23 downto 0);   -- q11.12
     set_port   : out std_logic); 
 end entity reciprocal_24b;
 
@@ -31,7 +31,7 @@ component newton_24b  -- interface that executes 2 step newtons-rhapson
     reset_port : in std_logic;
     mantissa   : in std_logic_vector(23 downto 0); 
     seed       : in std_logic_vector(23 downto 0);   -- q6.17
-    root       : out std_logic_vector(23 downto 0);  -- 11.12
+    root       : out std_logic_vector(23 downto 0);  -- q6.17
     set_port   : out std_logic); 
 end component newton_24b;
 ----------------------- declarations -------------------------------------
@@ -179,7 +179,8 @@ set_port <= '1' when set_en = '1' else '0';
 
 set_reciprocal: process( clk_port )
   variable shift_count   : integer := 0; 
-  variable recip_helper  : unsigned(23 downto 0) := (others => '0'); 
+  variable recip_helper  : signed(23 downto 0) := (others => '0'); 
+  constant round         : signed(23 downto 0) := x"000010";
 begin 
   shift_count  := to_integer(exponent); 
   recip_helper := (others => '0'); 
@@ -188,7 +189,7 @@ begin
     if reset_port = '1' then 
       reciprocal <= (others => '0');
     elsif set_en = '1' then
-      recip_helper := unsigned(root); 
+      recip_helper := signed(root); 
         
       if shift_count >= 0 then 
         recip_helper := shift_right(recip_helper, shift_count); 
@@ -196,11 +197,17 @@ begin
         recip_helper := shift_left(recip_helper, -shift_count); 
       end if; 
       
-      if negative = '1' then 
-        reciprocal <= std_logic_vector( -signed(recip_helper) ); 
+      if recip_helper(23) = '1' then 
+        recip_helper := shift_right(recip_helper - round, 5); 
       else 
-        reciprocal <= std_logic_vector( recip_helper ); 
+        recip_helper := shift_right(recip_helper + round, 5); 
       end if;
+      
+      if negative = '1' then 
+        reciprocal <= std_logic_vector(-recip_helper);
+      else
+        reciprocal <= std_logic_vector(recip_helper);
+      end if; 
     end if; 
   end if; 
 end process set_reciprocal;
