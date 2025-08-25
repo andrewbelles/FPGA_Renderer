@@ -39,14 +39,15 @@ end component reciprocal_24b;
   signal divide_en      : std_logic := '0'; 
   signal divide_set     : std_logic := '0';
   signal reciprocal_sg  : std_logic_vector(23 downto 0) := (others => '0'); 
-  signal Wc_reciprocal  : signed(23 downto 0) := (others => '0');
+  signal Wc_reciprocal  : signed(17 downto 0) := (others => '0');
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
   signal Xc, Yc         : signed(23 downto 0) := (others => '0');
   signal Xc_wide        : signed(47 downto 0) := (others => '0');
   signal Yc_wide        : signed(47 downto 0) := (others => '0');
 
-  constant m00          : signed(23 downto 0) := x"0014c9";
-  constant m11          : signed(23 downto 0) := x"001BB6";
+  -- 18 bit to infer native 25x18 multiplication for dsp slice 
+  constant m00          : signed(17 downto 0) := "00" & x"14c9";
+  constant m11          : signed(17 downto 0) := "00" & x"1BB6";
   constant b            : signed(23 downto 0) := x"000080";
 begin 
 --------------------------------------------------------------------------
@@ -73,9 +74,9 @@ begin
       Xc <= (others => '0');
       Yc <= (others => '0');
     elsif load_en = '1' then 
-      wide_bus := m00 * signed(x); 
+      wide_bus := resize(resize(signed(x), 25) * m00, 48); 
       Xc <= shift_right(wide_bus, 12)(23 downto 0); 
-      wide_bus := m11 * signed(y);
+      wide_bus := resize(resize(signed(y), 25) * m11, 48);
       Yc <= shift_right(wide_bus, 12)(23 downto 0); 
     end if;  
   end if; 
@@ -87,7 +88,7 @@ begin
     if reset_en = '1' then 
       Wc_reciprocal <= (others => '0'); 
     elsif load_rec_en = '1' then 
-      Wc_reciprocal <= signed(reciprocal_sg); 
+      Wc_reciprocal <= signed(reciprocal_sg(23 downto 6)); 
     end if; 
   end if; 
 end process; 
@@ -96,12 +97,14 @@ end process;
 process( clk_port )
   variable round  : signed(23 downto 0) := x"000800"; 
   variable tx, ty : signed(23 downto 0) := (others => '0');
-  variable ndc_helper : signed(47 downto 0) := (others => '0'); 
+  variable xndc_helper : signed(47 downto 0) := (others => '0'); 
+  variable yndc_helper : signed(47 downto 0) := (others => '0'); 
 begin 
   round := x"000800";
   tx    := (others => '0'); 
   ty    := (others => '0');
-  ndc_helper := (others => '0'); 
+  xndc_helper := (others => '0'); 
+  yndc_helper := (others => '0'); 
 
   if rising_edge(clk_port) then 
     if reset_en = '1' then 
@@ -110,10 +113,10 @@ begin
       divide_set <= '0';
       shift_set  <= '0'; 
     elsif divide_en = '1' then
-      ndc_helper := Xc * Wc_reciprocal;  
-      xndc <= shift_right(ndc_helper, 12)(23 downto 0);
-      ndc_helper := Yc * Wc_reciprocal;  
-      yndc <= shift_right(ndc_helper, 12)(23 downto 0);
+      xndc_helper := resize(resize(Xc, 25) * Wc_reciprocal, 48);  
+      xndc <= shift_right(xndc_helper, 6)(23 downto 0);
+      yndc_helper := resize(resize(Yc, 25) * Wc_reciprocal, 48);  
+      yndc <= shift_right(yndc_helper, 6)(23 downto 0);
       divide_set <= '1'; 
     elsif shift_en = '1' then 
       tx := xndc; 
@@ -138,7 +141,7 @@ end process;
 
 set_port <= '1' when set_en = '1' else '0';
 
-next_state_logic: process ( current_state, reset_port, load_port, reciprocal_set, divide_set )
+next_state_logic: process ( current_state, reset_port, load_port, reciprocal_set, divide_set, shift_set )
 begin 
   if reset_port = '1' then 
     next_state <= idle; 

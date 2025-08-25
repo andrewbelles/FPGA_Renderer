@@ -53,8 +53,7 @@ port map(
   nz           => local_new_p(0)(2),
   point_packet => local_packets(0),
   set_port     => update_set(0)); 
-
-
+  
 get_proj2: update_point 
 port map( 
   clk_port     => clk_port,  
@@ -75,7 +74,7 @@ port map(
 get_proj3: update_point 
 port map( 
   clk_port     => clk_port,  
-  load_port    => update_set(0), 
+  load_port    => load_port, 
   reset_port   => reset_port,  
   angle        => angle, 
   dir          => dir, 
@@ -92,7 +91,7 @@ port map(
 get_proj4: update_point 
 port map( 
   clk_port     => clk_port,  
-  load_port    => update_set(1), 
+  load_port    => load_port, 
   reset_port   => reset_port,  
   angle        => angle, 
   dir          => dir, 

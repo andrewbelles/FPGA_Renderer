@@ -36,20 +36,24 @@ component newton_24b  -- interface that executes 2 step newtons-rhapson
 end component newton_24b;
 ----------------------- declarations -------------------------------------
 -- state declarations 
-  type state_type is ( idle, load, normalize, seed, newtons, done );   
+  type state_type is ( idle, load, find_msb, normalize, seed, newtons, shift, done );   
   signal current_state : state_type := idle; 
   signal next_state    : state_type := idle; 
 
 -- enables set by output of fsm
   signal load_en       : std_logic := '0'; 
+  signal msb_en        : std_logic := '0'; 
   signal seed_en       : std_logic := '0';
   signal reset_en      : std_logic := '0'; 
   signal normalize_en  : std_logic := '0';
   signal newton_en     : std_logic := '0';
+  signal shift_en      : std_logic := '0'; 
   signal set_en        : std_logic := '0';
 
 -- set_port signal from newton_24b 
   signal newton_set    : std_logic := '0';
+  signal shift_set     : std_logic := '0'; 
+  signal msb_set       : std_logic := '0'; 
 
 -- constant addr,seed pair being fetched. only right once state > seed  
   signal addr          : std_logic_vector(9 downto 0)  := (others => '0');
@@ -60,6 +64,7 @@ end component newton_24b;
   signal exponent      : signed(4 downto 0)            := (others => '0');
   signal magnitude     : unsigned(23 downto 0)         := (others => '0');
   signal norm          : unsigned(23 downto 0)         := (others => '0');
+  signal reciprocal_sg : signed(23 downto 0)           := (others => '0'); 
 
 -- signals for newtons method 
   signal mantissa      : std_logic_vector(23 downto 0) := (others => '0');
@@ -76,12 +81,9 @@ begin
 --------------------------------------------------------------------------
 load_value: process( clk_port )
   variable abs_helper : unsigned(23 downto 0);
-  variable p          : unsigned(4 downto 0) := "11111";
 begin 
 
   abs_helper := (others => '0');
-  p          := "11111";
-
   if rising_edge( clk_port ) then  
     if reset_en = '1' then 
       magnitude <= (others => '0');
@@ -101,20 +103,35 @@ begin
         abs_helper := epsilon;  
       end if; 
 
-      -- get count for normalization 
-      for i in 22 downto 0 loop 
-        -- if p is not set it is at 31, only flags for msb high bit  
-        if p = 31 and abs_helper(i) = '1' then 
-          p := to_unsigned(i, 5);
-        end if; 
-      end loop; 
-
-      -- exponent is how far first high bit is from perceived decimal point 
       magnitude <= abs_helper;
-      exponent  <= signed(p) - 12; 
     end if; 
   end if; 
 end process load_value;
+
+process( clk_port )
+  variable exp_helper : unsigned(23 downto 0) := (others => '0'); 
+  variable p          : unsigned(4 downto 0)  := "11111"; 
+begin 
+  p := "11111";
+  exp_helper := magnitude; 
+
+  if rising_edge(clk_port) then 
+    if reset_en = '1' then 
+      exponent <= (others => '0'); 
+    elsif msb_en = '1' then
+      -- get count for normalization 
+      for i in 22 downto 0 loop 
+        -- if p is not set it is at 31, only flags for msb high bit  
+        if p = "11111" and exp_helper(i) = '1' then 
+          p := to_unsigned(i, 5);
+        end if; 
+      end loop; 
+      -- exponent is how far first high bit is from perceived decimal point   
+      exponent  <= signed(p) - 12;
+      msb_set <= '1';  
+    end if; 
+  end if; 
+end process; 
 
 --------------------------------------------------------------------------
 -- Input normalization  
@@ -179,39 +196,54 @@ set_port <= '1' when set_en = '1' else '0';
 
 set_reciprocal: process( clk_port )
   variable shift_count   : integer := 0; 
-  variable recip_helper  : signed(23 downto 0) := (others => '0'); 
-  constant round         : signed(23 downto 0) := x"000010";
+  variable helper        : signed(23 downto 0) := (others => '0');
+  variable shift_helper  : signed(23 downto 0) := (others => '0');
 begin 
   shift_count  := to_integer(exponent); 
-  recip_helper := (others => '0'); 
+  helper := (others => '0'); 
+  shift_helper := (others => '0'); 
   
   if rising_edge( clk_port ) then 
     if reset_port = '1' then 
-      reciprocal <= (others => '0');
-    elsif set_en = '1' then
-      recip_helper := signed(root); 
+      reciprocal_sg <= (others => '0');
+      shift_set <= '0'; 
+    elsif shift_en = '1' then
+      helper := signed(root); 
         
       if shift_count >= 0 then 
-        recip_helper := shift_right(recip_helper, shift_count); 
+        shift_helper := shift_right(helper, shift_count); 
       else 
-        recip_helper := shift_left(recip_helper, -shift_count); 
-      end if; 
-      
-      if recip_helper(23) = '1' then 
-        recip_helper := shift_right(recip_helper - round, 5); 
-      else 
-        recip_helper := shift_right(recip_helper + round, 5); 
+        shift_helper := shift_left(helper, -shift_count); 
       end if;
-      
-      if negative = '1' then 
-        reciprocal <= std_logic_vector(-recip_helper);
-      else
-        reciprocal <= std_logic_vector(recip_helper);
-      end if; 
+      reciprocal_sg <= shift_helper; 
+      shift_set <= '1'; 
     end if; 
   end if; 
 end process set_reciprocal;
 
+process( clk_port ) 
+  variable helper       : signed(23 downto 0) := (others => '0'); 
+  variable round_helper : signed(23 downto 0) := (others => '0'); 
+  constant round        : signed(23 downto 0) := x"000010";
+begin 
+  helper := (others => '0'); 
+  if rising_edge(clk_port) then 
+    if set_en = '1' then 
+      helper := reciprocal_sg;
+      if helper(23) = '1' then 
+        round_helper := shift_right(helper - round, 5); 
+      else 
+        round_helper := shift_right(helper + round, 5); 
+      end if;
+      
+      if negative = '1' then 
+        reciprocal <= std_logic_vector(-round_helper);
+      else
+        reciprocal <= std_logic_vector(round_helper);
+      end if; 
+    end if; 
+  end if; 
+end process; 
 --------------------------------------------------------------------------
 -- FSM Logic 
 --------------------------------------------------------------------------
@@ -227,14 +259,22 @@ begin
           next_state <= load; 
         end if; 
       when load => 
-        next_state <= normalize;  -- load takes a single cycle 
+        next_state <= find_msb;  -- load takes a single cycle 
+      when find_msb => 
+        if msb_set = '1' then 
+          next_state <= normalize; 
+        end if; 
       when normalize => 
         next_state <= seed; 
       when seed => 
         next_state <= newtons;  
       when newtons => 
         if newton_set = '1' then  
-          next_state <= done; 
+          next_state <= shift; 
+        end if; 
+      when shift =>
+        if shift_set = '1' then 
+          next_state <= done;         
         end if; 
       when done => 
         next_state <= idle; 
@@ -246,23 +286,29 @@ end process next_state_logic;
 
 output_logic: process( current_state )
 begin 
-  reset_en <= '0';
-  load_en <= '0'; 
+  reset_en     <= '0';
+  load_en      <= '0'; 
+  msb_en       <= '0';
   normalize_en <= '0';
-  newton_en <= '0';
-  seed_en <= '0';
-  set_en <= '0';
+  newton_en    <= '0';
+  seed_en      <= '0';
+  set_en       <= '0';
+  shift_en     <= '0'; 
   case ( current_state ) is 
     when idle => 
       reset_en <= '1'; 
     when load => 
       load_en <= '1'; 
+    when find_msb => 
+      msb_en <= '1'; 
     when normalize => 
       normalize_en <= '1';
     when seed =>
       seed_en <= '1';
     when newtons => 
       newton_en <= '1';
+    when shift => 
+      shift_en <= '1'; 
     when done => 
       set_en <= '1';
     when others => 
