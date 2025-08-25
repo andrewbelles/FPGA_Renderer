@@ -66,10 +66,13 @@ end component newton_24b;
   signal norm          : unsigned(23 downto 0)         := (others => '0');
   signal reciprocal_sg : signed(23 downto 0)           := (others => '0'); 
 
+  signal pidx          : unsigned(4 downto 0) := (others=>'0');
+  signal right_flag    : std_logic := '0';
+  signal shift_count   : unsigned(4 downto 0) := (others=>'0');
+
 -- signals for newtons method 
   signal mantissa      : std_logic_vector(23 downto 0) := (others => '0');
   signal newton_seed   : std_logic_vector(23 downto 0) := (others => '0');
-  signal bufr_seed     : std_logic_vector(23 downto 0) := (others => '0');
   signal root          : std_logic_vector(23 downto 0) := (others => '0');
 
 -- ensure numeric stability
@@ -129,6 +132,15 @@ begin
       -- exponent is how far first high bit is from perceived decimal point   
       exponent  <= signed(p) - 12;
       msb_set <= '1';  
+
+      pidx <= p;  -- registered MSB index
+      if p >= 12 then
+        right_flag <= '1';
+        shift_count  <= p - 12;
+      else
+        right_flag <= '0';
+        shift_count   <= 12 - p;
+      end if;
     end if; 
   end if; 
 end process; 
@@ -137,23 +149,22 @@ end process;
 -- Input normalization  
 --------------------------------------------------------------------------
 get_norm: process( clk_port )
-  variable shift_count : integer := 0; 
   variable norm_helper : unsigned(23 downto 0) := (others => '0'); 
+  variable s           : integer := 0;
 begin
-  shift_count := to_integer(exponent); 
   norm_helper := (others => '0'); 
+  s := to_integer(shift_count);
   
   if rising_edge( clk_port ) then
     if reset_en = '1' then 
       norm <= (others => '0');
     elsif normalize_en = '1' then
       -- shift by distance from 1.22 
-      if shift_count >= 0 then 
-        norm_helper := shift_right(magnitude, shift_count);
+      if right_flag = '1' then 
+        norm <= shift_left(shift_right(magnitude, s), 10);
       else 
-        norm_helper := shift_left(magnitude, -shift_count); 
+        norm <= shift_left(shift_left(magnitude, s), 10); 
       end if; 
-      norm <= shift_left(norm_helper, 10);  -- to 1.22
     end if; 
   end if; 
 end process get_norm; 
@@ -247,7 +258,8 @@ end process;
 --------------------------------------------------------------------------
 -- FSM Logic 
 --------------------------------------------------------------------------
-next_state_logic: process ( current_state, reset_port, load_port, newton_set )
+next_state_logic: process ( current_state, reset_port, load_port, 
+                            msb_set, shift_set, newton_set )
 begin 
   if reset_port = '1' then 
     next_state <= idle; 
