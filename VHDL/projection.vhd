@@ -42,8 +42,6 @@ end component reciprocal_24b;
   signal Wc_reciprocal  : signed(17 downto 0) := (others => '0');
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
   signal Xc, Yc         : signed(23 downto 0) := (others => '0');
-  signal Xc_wide        : signed(47 downto 0) := (others => '0');
-  signal Yc_wide        : signed(47 downto 0) := (others => '0');
 
   -- 18 bit to infer native 25x18 multiplication for dsp slice 
   constant m00          : signed(17 downto 0) := "00" & x"14c9";
