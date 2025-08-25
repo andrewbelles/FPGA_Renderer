@@ -360,6 +360,7 @@ begin
     am_waiting <= '0';
     go_swap <= '0';
     done_drawing <= '0';
+    ready_to_draw <= '0'; -- added to not infer latch
     case current_state is
         when IDLE =>
             ready_to_draw <= '1';

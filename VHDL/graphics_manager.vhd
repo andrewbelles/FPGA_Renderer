@@ -25,7 +25,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 use work.array_types.all;
 entity graphics_manager is
-Port ( clk_ext_port	  : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
+Port ( sys_clk	  : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
        points         : in array_4x16_t;
        draw_new_points     : in std_logic;
        ready_to_draw       : out std_logic;
@@ -103,14 +103,14 @@ begin
 -- wire the controller
 vga_control : vga_controller 
     Port Map(
-        clk => clk_ext_port, -- uses the 100MHz FPGA clock
+        clk => sys_clk, -- uses the 100MHz FPGA clock
         video_on => video_on,
         H_sync => HS_sig,
         V_sync => VS_sig,
         pixel_x => pixel_x,
         pixel_y => pixel_y);
 framebuff : framebuffer
-    Port Map(clk => clk_ext_port,
+    Port Map(clk => sys_clk,
           write_x => write_x,
           write_y => write_y,
           write_en => write_en,
@@ -131,7 +131,7 @@ framebuff : framebuffer
           VGA_out => color);
 bres_rec : bresenham_receiver
     Port Map(
-    clk => clk_ext_port,
+    clk => sys_clk,
     new_vertices => draw_new_points,
     vertices => points,
     clear_request => clear_request,

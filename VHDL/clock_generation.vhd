@@ -12,7 +12,7 @@ use UNISIM.VComponents.all;
 --Entity Declaration:
 --=============================================================================
 entity system_clock_generation is
-    Generic( CLK_DIVIDER_RATIO : integer := 100  );
+    Generic( CLK_DIVIDER_RATIO : integer := 4  );
     Port (
         --External Clock:
         input_clk_port		: in std_logic;

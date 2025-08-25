@@ -90,7 +90,7 @@ signal load_port_sg, reset_port_sg, set_port_sg : std_logic;
 signal angle_sg : array_2x16_t;
 signal dir_sg : array_2x2_t;
 signal points_sg : array_4x3x24_t; 
-signal draw_new_points_sg : std_logic;
+signal draw_new_points_sg : std_logic := '0';
 signal packets_sg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
 signal ready_to_draw_sg, done_drawing_sg : std_logic;
 signal new_points_sg : array_4x3x24_t;
