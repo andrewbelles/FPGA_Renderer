@@ -127,7 +127,7 @@ begin
       if ty(23) = '1' then 
         round := -round; 
       end if; 
-      ty := shift_right( shift_left(ty, 7) + round, 12) + b;
+      ty := shift_right( (-shift_left(ty, 7)) + round, 12) + b;
 
       -- latch point packet 
       point_packet <= std_logic_vector(ty(7 downto 0)) & std_logic_vector(tx(7 downto 0));
