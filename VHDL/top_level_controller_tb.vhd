@@ -89,11 +89,11 @@ begin
     wait for BAUD_PERIOD;
     rx <= '0';
     wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
     rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    rx <= '1';
     wait for BAUD_PERIOD;
     -- stop bit (1)
     rx <= '1';

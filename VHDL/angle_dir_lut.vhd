@@ -54,7 +54,7 @@ architecture behavioral of angle_dir_lut is
     
   constant direction_table : dirs_rom_t := (
     -- idx : (rot0_dir, rot1_dir)
-    0  => ("00", "00"),       -- no-op
+    0  => ("00", "00"), -- invalid
     1  => ("01", "01"),       -- a +Y
     2  => ("01", "01"),       -- d -Y
     3  => ("00", "00"),       -- e -X
@@ -67,11 +67,11 @@ architecture behavioral of angle_dir_lut is
     10 => ("10", "10"),       -- s -Z
     11 => ("00", "10"),       -- u +X & +Z
     12 => ("10", "10"),      -- w +Z
-    13 => ("00", "00"));
+    13 => ("00", "00")); -- initialization (rotate no direction)
 
   constant angles_table : angles_rom_t := (
     -- idx : (rot0_dir, rot1_dir)
-    0  => (x"0000", x"0000"),       -- no-op
+    0  => (x"0000", x"0000"), -- invalid
     1  => (x"02CB", x"02CB"),       -- a +Y
     2  => (x"61BD", x"61BD"),       -- d -Y
     3  => (x"61BD", x"61BD"),       -- e -X
@@ -84,7 +84,7 @@ architecture behavioral of angle_dir_lut is
     10 => (x"61BD", x"61BD"),       -- s -Z
     11 => (x"02CB", x"02CB"),       -- u +X & +Z
     12 => (x"02CB", x"02CB"),      -- w +Zdd
-    13 => (x"0000", x"0000"));
+    13 => (x"0000", x"0000")); -- initialization (rotation 0 degrees)
   
 begin 
  

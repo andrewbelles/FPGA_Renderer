@@ -253,7 +253,7 @@ end process;
            
 address : process(sys_clk)
 begin
-    if(rising_edge(clk_ext_port)) then
+    if(rising_edge(sys_clk)) then
         if(init_control = '1') then
             addr_reg <= (others => '0'); -- set address to 0 if initializing
         elsif(map_press_control = '1') then
