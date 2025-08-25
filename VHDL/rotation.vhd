@@ -49,6 +49,8 @@ end component rotation_mul_24b;
 ----------------------- local declarations -------------------------------
 -- signals
   signal sine, cosine    : std_logic_vector(23 downto 0) := (others => '0');
+  signal sin_sg, cos_sg  : signed(23 downto 0) := (others => '0');
+  signal inv_sin_sg      : signed(23 downto 0) := (others => '0');
   signal sin16, cos16    : std_logic_vector(15 downto 0) := (others => '0'); 
   signal inv_sine        : std_logic_vector(23 downto 0) := (others => '0');
   signal operands_sg     : array_3x24_t  := (others => (others => '0'));
@@ -59,6 +61,7 @@ end component rotation_mul_24b;
   signal cosine_set      : std_logic := '0'; 
   signal sine_set        : std_logic := '0';
   signal operand_set     : std_logic := '0'; 
+  signal trig_load       : std_logic := '0'; 
   signal multiplier_load : std_logic := '0'; 
   signal rotation_load   : std_logic := '0'; 
   signal update_set      : std_logic := '0';
@@ -108,15 +111,35 @@ end process invert_sine;
 set_load: process( clk_port )
 begin 
   if rising_edge(clk_port) then
-    if (en_port = '1' and sine_set = '1'
+    if reset_port = '1' then 
+      trig_load <= '0'; 
+      operands <= (others => (others => '0'));
+    elsif (en_port = '1' and sine_set = '1'
         and cosine_set = '1' and operand_set = '1') then 
-      multiplier_load <= '1';
+      trig_load <= '1';
       for i in 0 to 2 loop  
         operands(i) <= signed(operands_sg(i));
       end loop; 
     end if;
   end if; 
 end process set_load; 
+
+process( clk_port )
+begin 
+  if rising_edge( clk_port ) then 
+    if reset_port = '1' then 
+      sin_sg     <= (others => '0');
+      inv_sin_sg <= (others => '0');
+      cos_sg  <= (others => '0');
+      multiplier_load <= '0';
+    elsif trig_load = '1' then 
+      sin_sg <= signed(sine);
+      cos_sg <= signed(cosine);
+      inv_sin_sg <= signed(inv_sin_sg);
+      multiplier_load <= '1'; 
+    end if; 
+  end if; 
+end process;
 
 -- Once we've loaded operators and have trig values proceed with matmul
 process ( clk_port ) 
@@ -127,10 +150,10 @@ begin
       rotation_load <= '0'; 
     elsif multiplier_load = '1' then 
       rotation_load <= '1'; 
-      mul48b(0) <= operands(1) * signed(cosine); 
-      mul48b(1) <= operands(1) * signed(sine);
-      mul48b(2) <= operands(2) * signed(cosine);
-      mul48b(3) <= operands(2) * (-signed(sine));
+      mul48b(0) <= operands(1) * cos_sg; 
+      mul48b(1) <= operands(1) * sin_sg;
+      mul48b(2) <= operands(2) * cos_sg;
+      mul48b(3) <= operands(2) * inv_sin_sg;
     end if; 
   end if; 
 end process; 
