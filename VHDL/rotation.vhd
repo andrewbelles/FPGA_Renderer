@@ -120,6 +120,8 @@ begin
       for i in 0 to 2 loop  
         operands(i) <= signed(operands_sg(i));
       end loop; 
+    else  
+      trig_load <= '0'; 
     end if;
   end if; 
 end process set_load; 
@@ -135,8 +137,10 @@ begin
     elsif trig_load = '1' then 
       sin_sg <= signed(sine);
       cos_sg <= signed(cosine);
-      inv_sin_sg <= signed(inv_sin_sg);
+      inv_sin_sg <= signed(inv_sine);
       multiplier_load <= '1'; 
+    else 
+      multiplier_load <= '0'; 
     end if; 
   end if; 
 end process;
@@ -154,6 +158,8 @@ begin
       mul48b(1) <= operands(1) * sin_sg;
       mul48b(2) <= operands(2) * cos_sg;
       mul48b(3) <= operands(2) * inv_sin_sg;
+    else
+      rotation_load <= '0'; 
     end if; 
   end if; 
 end process; 

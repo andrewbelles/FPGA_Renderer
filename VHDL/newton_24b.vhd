@@ -47,20 +47,19 @@ begin
   x48bus := (others => '0'); 
   if rising_edge( clk_port ) then  
     if reset_en = '1' then 
+      counter <= (others => '0');
       x1 <= (others => '0'); 
       x1_partial <= (others => '0');
       x1_diff <= (others => '0');
       x2 <= (others => '0');
       x2_partial <= (others => '0');
       x2_diff <= (others => '0');
-    elsif counter = "10" then 
-      counter <= "00"; -- go back to low one cycle after  
     elsif load_port = '1' then 
       if counter = "00" then 
         if mulA_en = '1' then 
           x48bus := m * x0; -- 1.22 * 6.17 -> 11.12 requires 22+17=39, 27 shifts
           x1_partial <= shift_right(x48bus, 22)(23 downto 0); 
-        elsif mulB_en = '1' then 
+        elsif diff_en = '1' then 
           x1_diff <= two_1112 - x1_partial; 
         elsif mulB_en = '1' then 
           x48bus := x0 * x1_diff; 
@@ -74,7 +73,7 @@ begin
         elsif diff_en = '1' then 
           x2_diff <= two_1112 - x2_partial; 
         elsif mulB_en = '1' then 
-          x48bus := x0 * x2_diff; 
+          x48bus := x1 * x2_diff; 
           x2 <= shift_right(x48bus, 17)(23 downto 0); -- 17 + 12 -> 12 
           counter <= counter + 1; 
         end if; 
@@ -82,7 +81,6 @@ begin
     end if; 
   end if; 
 end process newtons_method;
-
 
 --- enable set once counter goes high 
 set_port <= '1' when set_en = '1' else '0'; 
