@@ -127,10 +127,10 @@ begin
       if ty(23) = '1' then 
         round := -round; 
       end if; 
-      ty := shift_right( shift_left(ty, 7) + round, 12) + b;
+      ty := shift_right( shift_left(-ty, 7) + round, 12) + b;
 
       -- latch point packet 
-      point_packet <= std_logic_vector(ty(7 downto 0)) & std_logic_vector(tx(7 downto 0));
+      point_packet <= std_logic_vector(tx(7 downto 0)) & std_logic_vector(ty(7 downto 0));
       shift_set <= '1'; 
     end if; 
   end if; 
@@ -138,7 +138,7 @@ end process;
 
 set_port <= '1' when set_en = '1' else '0';
 
-next_state_logic: process ( current_state, reset_port, load_port, reciprocal_set, divide_set )
+next_state_logic: process ( current_state, reset_port, load_port, reciprocal_set, shift_set, divide_set )
 begin 
   if reset_port = '1' then 
     next_state <= idle; 

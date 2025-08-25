@@ -26,8 +26,8 @@ use IEEE.NUMERIC_STD.ALL;
 use work.array_types.all;
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
+library UNISIM;
+use UNISIM.VComponents.all;
 
 entity top_level_controller is
   Port (clk_ext_port   : in std_logic;
@@ -47,9 +47,16 @@ component uart_receiver is
                data : out STD_LOGIC_VECTOR(7 downto 0);
                data_valid : out STD_LOGIC);
 end component;
-
+component system_clock_generation is
+    Generic( CLK_DIVIDER_RATIO : integer := 4  );
+    Port (
+        --External Clock:
+        input_clk_port		: in std_logic;
+        --System Clock:
+        system_clk_port		: out std_logic);
+end component;
 component graphics_manager is
-    Port ( clk_ext_port	   : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
+    Port ( sys_clk	   : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
        points              : in array_4x16_t;
        draw_new_points     : in std_logic;
        ready_to_draw            : out std_logic;
@@ -82,6 +89,7 @@ component angle_dir_lut is
   lut_ready : out std_logic);
 end component;
 -- signals 
+signal sys_clk : std_logic;
 signal data : std_logic_vector(7 downto 0);
 signal data_valid, HS_sig, VS_sig : std_logic;
 signal red_sg, green_sg, blue_sg : std_logic_vector(3 downto 0);
@@ -106,14 +114,17 @@ type state is (INIT, IDLE, MAP_PRESS, MATH, WAIT_SCREEN, START_DRAW, DRAW);
 signal next_state, current_state : state := INIT;
 signal map_press_control, init_control : std_logic;
 begin
+clock : system_clock_generation
+Port Map(input_clk_port => clk_ext_port,
+         system_clk_port => sys_clk);
 rec : uart_receiver
-    Port Map(clk => clk_ext_port,
+    Port Map(clk => sys_clk, -- using 100Mhz clock for uart
              rx => RsRx_ext_port,
              data => data,
              data_valid => data_valid);
 
 graphics_man : graphics_manager
-    Port Map(clk_ext_port => clk_ext_port,
+    Port Map(sys_clk => sys_clk,
          points      => packets_sg,
          draw_new_points  => draw_new_points_sg, 
          ready_to_draw => ready_to_draw_sg,
@@ -125,7 +136,7 @@ graphics_man : graphics_manager
          VS => VS_sig);
 
 math_man : parallel_math 
-    Port Map(clk_port => clk_ext_port,
+    Port Map(clk_port => sys_clk,
              load_port => load_port_sg,
              reset_port => reset_port_sg,
              angle => angle_sg,
@@ -136,16 +147,16 @@ math_man : parallel_math
              set_port => set_port_sg);
 
 angle_dir: angle_dir_lut 
-    Port Map(clk_port => clk_ext_port,
+    Port Map(clk_port => sys_clk,
              addr => addr_reg,
              dirs => dir_sg,
              angles => angle_sg,
              lut_ready => lut_ready);
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------    
 -- FSM controller
-state_update : process(clk_ext_port) 
+state_update : process(sys_clk) 
 begin
-    if(rising_edge(clk_ext_port)) then
+    if(rising_edge(sys_clk)) then
         current_state <= next_state;
     end if;
 end process;
@@ -209,15 +220,15 @@ begin
     end case;
 end process;
 
-point_proc : process(clk_ext_port)
+point_proc : process(sys_clk)
 begin
-    if(rising_edge(clk_ext_port)) then
+    if(rising_edge(sys_clk)) then
         load_port_sg <= '0';
         if(init_control = '1') then
-            current_points(0)(0 to 2) <= (x"014000", x"014000", x"014000");
-            current_points(1)(0 to 2) <= (x"014000", x"FEC000", x"FEC000");
-            current_points(2)(0 to 2) <= (x"FEC000", x"014000", x"FEC000");
-            current_points(3)(0 to 2) <= (x"FEC000", x"FEC000", x"014000"); 
+            current_points(0)(0 to 2) <= (x"032000", x"032000", x"00A000");
+            current_points(1)(0 to 2) <= (x"032000", x"FCE000", x"FF6000");
+            current_points(2)(0 to 2) <= (x"FCE000", x"032000", x"FF6000");
+            current_points(3)(0 to 2) <= (x"FCE000", x"FCE000", x"00A000"); 
         -- update current_points when done with math
         elsif(set_port_sg = '1') then
             current_points <= new_points_sg;
@@ -231,7 +242,7 @@ begin
     end if;
 end process;
            
-address : process(clk_ext_port)
+address : process(sys_clk)
 begin
     if(rising_edge(clk_ext_port)) then
         if(init_control = '1') then

@@ -47,7 +47,7 @@ component top_level_controller is
          );
 end component;
 signal clk, HS, VS : std_logic;
-signal rx : std_logic;
+signal rx : std_logic := '1';
 signal red, green, blue : std_logic_vector(3 downto 0);
 
 
@@ -70,33 +70,32 @@ clk <= '1';
 wait for CLK_PERIOD / 2;
 end process;
 
-stim: process
-begin
--- note since clk period and buad period dont line up, no need to shift starting
+--stim: process
+--begin
+---- note since clk period and buad period dont line up, no need to shift starting
 
-    wait for BAUD_PERIOD; 
-    -- start bit (0)
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    -- first data bit
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    -- stop bit (1)
-    rx <= '1';
-    wait;
-end process;
+--    wait for BAUD_PERIOD; 
+--    -- start bit (0)
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    -- first data bit
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    -- stop bit (1)
+--    rx <= '1';
+--    wait;
 end Behavioral;

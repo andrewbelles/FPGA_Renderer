@@ -40,7 +40,7 @@ architecture Behavioral of uart_receiver is
 
 
 signal shift_reg    : std_logic_vector(7 downto 0) := (others => '0'); -- holds 8 bits of data
-signal baud_counter : unsigned(13 downto 0) := (others => '0'); -- need 14 bits to count to 10416 (approx. ratio of clk rate to baud rate -- 100,000,000 / 9600)
+signal baud_counter : unsigned(11 downto 0) := (others => '0'); -- need 12 bits to count to 2604 (approx. ratio of clk rate to baud rate -- 25,000,000 / 9600)
 signal bit_counter  : unsigned(3 downto 0) := (others => '0');  -- need 4 bits to count 0 to 8 (8 bits of data). We shift 8 bits in, and increment as we shift so need to go 1 to 8
 
 signal baud_reset, bit_reset, shift_en : std_logic;
@@ -90,8 +90,8 @@ begin
 end process;
 
 -- terminal counts
-tc_baud <= '1' when baud_counter = 10416 else '0'; -- count 0 to 10416 (approx one baud period)
-tc_baud2 <= '1' when baud_counter = 5207 else '0'; -- count 0 to 5207 (approxhalf of baud period)
+tc_baud <= '1' when baud_counter = 2604 else '0'; -- count 0 to 2604 (approx one baud period)
+tc_baud2 <= '1' when baud_counter = 1302 else '0'; -- count 0 to  (approxhalf of baud period)
 tc_bit <= '1' when bit_counter = 7 else '0'; -- count 1 to 8
 
 ---------------------------------------------------------------------------------------------------------------------------------------------

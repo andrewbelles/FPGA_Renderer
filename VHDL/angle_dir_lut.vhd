@@ -83,7 +83,7 @@ architecture behavioral of angle_dir_lut is
     9  => (x"02CB", x"02CB"),       -- q +X
     10 => (x"61BD", x"61BD"),       -- s -Z
     11 => (x"02CB", x"02CB"),       -- u +X & +Z
-    12 => (x"02CB", x"02CB"),      -- w +Z
+    12 => (x"02CB", x"02CB"),      -- w +Zdd
     13 => (x"0000", x"0000"));
   
 begin 
