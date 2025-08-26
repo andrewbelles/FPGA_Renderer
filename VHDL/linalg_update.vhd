@@ -72,7 +72,7 @@ end process;
 rot1: rotation
  port map(
     clk_port   => clk_port,
-    en_port    => rot1_en, 
+    en_port    => load_port, 
     reset_port => reset_port,
     angle      => angle(0),
     dir        => dir(0),
