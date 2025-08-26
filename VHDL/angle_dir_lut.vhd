@@ -98,7 +98,7 @@ architecture behavioral of angle_dir_lut is
     9  => (pos, pos),       -- q +X
     10 => (neg, neg),       -- s -Z
     11 => (pos, pos),       -- u +X & +Z
-    12 => (pos, pos),      -- w +Zdd
+    12 => (pos, pos),       -- w +Z
     13 => (x"0000", x"0000")); -- initialization (rotation 0 degrees)
   
 begin 

@@ -96,7 +96,7 @@ signal sys_clk : std_logic := '0';
 signal data : std_logic_vector(7 downto 0) := (others => '0');
 -- graphics
 signal data_valid, HS_sig, VS_sig : std_logic := '0';
-signal red_sg, green_sg, blue_sg : std_logic_vector(3 downto 0) := (others => '0');
+signal red_sg, green_sg, blue_sg  : std_logic_vector(3 downto 0) := (others => '0');
 signal draw_new_points_sg : std_logic := '0';
 
 -- math signals
@@ -113,10 +113,10 @@ signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0');
 signal request_sg, lut_valid, lut_invalid : std_logic := '0';
 
 signal current_points : array_4x3x24_t := (
-    0 => (0 => x"00A000", 1 => x"00A000", 2 => x"005000"),
-    1 => (0 => x"00A000", 1 => x"FF6000", 2 => x"FFB000"),
-    2 => (0 => x"FF6000", 1 => x"00A000", 2 => x"FFB000"),
-    3 => (0 => x"FF6000", 1 => x"FF6000", 2 => x"005000")
+    0 => (0 => x"00C000", 1 => x"00C000", 2 => x"FF4000"),
+    1 => (0 => x"000000", 1 => x"FF4000", 2 => x"FF4000"),
+    2 => (0 => x"FF4000", 1 => x"00C000", 2 => x"FF4000"),
+    3 => (0 => x"000000", 1 => x"000000", 2 => x"00C000")
 );
 
 -- FSM
