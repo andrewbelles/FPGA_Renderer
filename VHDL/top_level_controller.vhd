@@ -83,36 +83,45 @@ end component;
 component angle_dir_lut is
     port( 
   clk_port   : in std_logic; 
+  request    : in std_logic;
   addr       : in std_logic_vector(7 downto 0); 
   dirs       : out array_2x2_t; 
   angles     : out array_2x16_t;
-  lut_ready : out std_logic);
+  lut_valid : out std_logic;
+  lut_invalid : out std_logic);
 end component;
 -- signals 
-signal sys_clk : std_logic;
-signal data : std_logic_vector(7 downto 0);
-signal data_valid, HS_sig, VS_sig : std_logic;
-signal red_sg, green_sg, blue_sg : std_logic_vector(3 downto 0);
-
-signal load_port_sg, reset_port_sg, set_port_sg : std_logic;
-signal angle_sg : array_2x16_t;
-signal dir_sg : array_2x2_t;
-signal points_sg : array_4x3x24_t; 
+signal sys_clk : std_logic := '0';
+signal data : std_logic_vector(7 downto 0) := (others => '0');
+-- graphics
+signal data_valid, HS_sig, VS_sig : std_logic := '0';
+signal red_sg, green_sg, blue_sg : std_logic_vector(3 downto 0) := (others => '0');
 signal draw_new_points_sg : std_logic := '0';
-signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
-signal ready_to_draw_sg, done_drawing_sg : std_logic;
-signal new_points_sg : array_4x3x24_t;
 
-signal start_math : std_logic;
+-- math signals
+signal load_port_sg, reset_port_sg, set_port_sg : std_logic := '0';
+signal angle_sg : array_2x16_t := (others => (others => '0'));
+signal dir_sg : array_2x2_t := (others => (others => '0'));
+signal points_sg : array_4x3x24_t  := (others => (others => (others => '0'))); 
+signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
+signal ready_to_draw_sg, done_drawing_sg : std_logic := '0';
+signal new_points_sg : array_4x3x24_t := (others => (others => (others => '0')));
+
 -- lut
 signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0'); 
-signal lut_ready : std_logic;
+signal request_sg, lut_valid, lut_invalid : std_logic := '0';
 
-signal current_points : array_4x3x24_t;
+signal current_points : array_4x3x24_t := (
+    0 => (0 => x"032000", 1 => x"032000", 2 => x"00A000"),
+    1 => (0 => x"032000", 1 => x"FCE000", 2 => x"FF6000"),
+    2 => (0 => x"FCE000", 1 => x"032000", 2 => x"FF6000"),
+    3 => (0 => x"FCE000", 1 => x"FCE000", 2 => x"00A000")
+);
+
 -- FSM
 type state is (INIT, IDLE, MAP_PRESS, MATH, WAIT_SCREEN, START_DRAW, DRAW);
 signal next_state, current_state : state := INIT;
-signal map_press_control, init_control : std_logic;
+signal map_press_control, init_control : std_logic := '0';
 begin
 clock : system_clock_generation
 Port Map(input_clk_port => clk_ext_port,
@@ -148,12 +157,14 @@ math_man : parallel_math
 
 angle_dir: angle_dir_lut 
     Port Map(clk_port => sys_clk,
+             request => request_sg,
              addr => addr_reg,
              dirs => dir_sg,
              angles => angle_sg,
-             lut_ready => lut_ready);
+             lut_valid => lut_valid,
+             lut_invalid => lut_invalid);
              
-             
+-- store packet in register to ensure it gets loaded properly  
 process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
@@ -171,12 +182,12 @@ begin
     end if;
 end process;
 
-ns_logic : process(current_state, lut_ready, data_valid, set_port_sg, ready_to_draw_sg, done_drawing_sg)
+ns_logic : process(current_state, lut_valid, lut_invalid, data_valid, set_port_sg, ready_to_draw_sg, done_drawing_sg)
 begin
     next_state <= current_state;
     case current_state is
         when INIT => 
-            if(lut_ready = '1') then
+            if(lut_valid = '1') then
                 next_state <= MATH;
             end if;
         when IDLE =>
@@ -184,8 +195,10 @@ begin
                 next_state <= MAP_PRESS;
             end if;
         when MAP_PRESS =>
-            if(lut_ready = '1') then
+            if(lut_valid = '1' and lut_invalid = '0') then -- valid index from LUT (proceed to MATH)
                 next_state <= MATH;
+            elsif(lut_invalid = '1'and lut_valid = '0') then -- invalid index from LUT (go back to IDLE)
+                next_state <= IDLE;
             end if;
         when MATH => 
             if(set_port_sg = '1') then
@@ -212,25 +225,18 @@ begin
     init_control <= '0';
     map_press_control <= '0';
     load_port_sg <= '0';
-    reset_port_sg <= '0';
+    reset_port_sg <= '1';
     draw_new_points_sg <= '0';
     case current_state is
         when INIT =>
             init_control <= '1';
-        when IDLE =>
-            reset_port_sg <= '1';
         when MAP_PRESS =>
             map_press_control <= '1';
-            reset_port_sg <= '1';
         when MATH =>
             load_port_sg <= '1';
-        when WAIT_SCREEN =>
-            reset_port_sg <= '1';
+            reset_port_sg <= '0';
         when START_DRAW =>
             draw_new_points_sg <= '1';
-            reset_port_sg <= '1';
-        when DRAW => 
-            reset_port_sg <= '1'; -- reset math for next time
         when others =>
             null;
     end case;
@@ -254,23 +260,18 @@ end process;
 address : process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
+        -- default
+        request_sg <= '0';
         if(init_control = '1') then
-            addr_reg <= (others => '0'); -- set address to 0 if initializing
+            addr_reg <= (others => '0'); -- set address to 0 if initializing to map to idx 13
+            request_sg <= '1';
         elsif(map_press_control = '1') then
             addr_reg <= data; -- set address to data if in map press state
+            request_sg <= '1'; -- send request
         end if;
     end if;
 end process;
-           
---curr_points : process(clk_ext_port)
---begin
---    if(rising_edge(clk_ext_port)) then
---        if(init_control = '0' and start_math = '0') then -- if not in init state
---            current_points <= new_points_sg;
---        end if;
---    end if;
---end process;
--- vga outputs
+
 red <= red_sg;
 green <= green_sg;
 blue <= blue_sg;

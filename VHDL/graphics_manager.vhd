@@ -89,9 +89,6 @@ signal color             : STD_LOGIC_VECTOR(11 downto 0);
 signal write_x, write_y  : std_logic_vector(7 downto 0);
 signal write_en          : std_logic;
 signal pixel_x, pixel_y  : std_logic_vector(9 downto 0);
---signal dummy_reset       : std_logic;
---signal dummy_nv          : std_logic;
---signal dummy_vertices    : array_4x16_t;
 
 signal clear_fulfilled, clear_request, tet_drawn_sg, ready_to_draw_sg, done_drawing_sg : std_logic;
 

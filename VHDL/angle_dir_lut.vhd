@@ -1,3 +1,14 @@
+----------------------------------------------------------------------------------
+-- Angle dir LUT
+-- Ben Sheppard and Andy Belles
+
+-- Takes in an address (data for key pressed on keyboard) and returns the corresponding angle and direction for the rotation.
+-- Outputs lut_valid when these outputs are valid to be read and correspond to a valid rotation.
+-- Outputs lut_invalid when an invalid (unmapped) key has been pressed.
+----------------------------------------------------------------------------------
+
+
+
 library IEEE; 
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all; 
@@ -6,10 +17,12 @@ use work.array_types.all;
 entity angle_dir_lut is 
 port( 
   clk_port   : in std_logic; 
+  request    : in std_logic;
   addr       : in std_logic_vector(7 downto 0); 
   dirs       : out array_2x2_t; 
   angles     : out array_2x16_t;
-  lut_ready : out std_logic);
+  lut_valid  : out std_logic;
+  lut_invalid : out std_logic);
 end entity angle_dir_lut;
 
 architecture behavioral of angle_dir_lut is 
@@ -17,10 +30,9 @@ architecture behavioral of angle_dir_lut is
   --signal idx         : integer := 0;
   signal ascii_idx   : integer := 0;
   signal value       : unsigned(7 downto 0) := (others => '0'); 
-  signal op_set      : std_logic := '0';
+  signal is_valid      : std_logic := '0';
   signal read_angles : array_2x16_t := (others => (others => '0'));
   signal read_dirs   : array_2x2_t  := (others => (others => '0'));
-
   constant ascii_table : ascii_rom_t := (
     0 => 13, -- for init
     1 to 96 => 0,
@@ -67,7 +79,7 @@ architecture behavioral of angle_dir_lut is
     10 => ("10", "10"),       -- s -Z
     11 => ("00", "10"),       -- u +X & +Z
     12 => ("10", "10"),      -- w +Z
-    13 => ("00", "00")); -- initialization (rotate no direction)
+    13 => ("00", "00")); -- initialization (no direction)
 
   constant angles_table : angles_rom_t := (
     -- idx : (rot0_dir, rot1_dir)
@@ -90,22 +102,28 @@ begin
  
 value <= unsigned(addr);
 ascii_idx <= ascii_table(to_integer(value));
-op_set <= '0' when ascii_idx = 0 else '1';
-
+is_valid <= '0' when ascii_idx = 0 else '1';
 read_dirs   <= direction_table(ascii_idx);
 read_angles <= angles_table(ascii_idx);
 
 set_data: process( clk_port )
 begin 
   if rising_edge( clk_port ) then 
-    if op_set = '1' then 
-      lut_ready <= '1'; 
-      dirs   <= read_dirs; 
-      angles <= read_angles;
-    else 
-      lut_ready <= '0'; 
-    end if; 
-  end if;
+    -- defaults
+      lut_valid <= '0';
+      lut_invalid <= '0';
+      if(request = '1') then -- turns on if we have a request from central controller
+          if(is_valid = '1') then -- valid address (idx not 0)
+            lut_valid <= '1'; 
+            dirs   <= read_dirs; 
+            angles <= read_angles;
+          else -- invalid address (idx 0
+            lut_invalid <= '1'; 
+            dirs <= (others => (others => '0'));
+            angles <= (others => (others => '0'));
+          end if; 
+      end if;
+    end if;
 end process set_data; 
 
 end architecture behavioral;

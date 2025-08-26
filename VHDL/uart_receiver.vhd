@@ -43,14 +43,14 @@ signal shift_reg    : std_logic_vector(7 downto 0) := (others => '0'); -- holds 
 signal baud_counter : unsigned(11 downto 0) := (others => '0'); -- need 12 bits to count to 2604 (approx. ratio of clk rate to baud rate -- 25,000,000 / 9600)
 signal bit_counter  : unsigned(3 downto 0) := (others => '0');  -- need 4 bits to count 0 to 8 (8 bits of data). We shift 8 bits in, and increment as we shift so need to go 1 to 8
 
-signal baud_reset, bit_reset, shift_en : std_logic;
-signal baud_en, bit_inc : std_logic;
-signal tc_baud2, tc_baud, tc_bit : std_logic;
+signal baud_reset, bit_reset, shift_en : std_logic := '0';
+signal baud_en, bit_inc : std_logic := '0';
+signal tc_baud2, tc_baud, tc_bit : std_logic := '0';
 -- for double synch input
-signal rx_delayed : std_logic_vector(1 downto 0);
+signal rx_delayed : std_logic_vector(1 downto 0) := (others => '0');
 
 type state is (IDLE, WAIT_TC2, RECENTER_TIMING, WAIT_TC, SHIFT2, DATA_READY, DONE, WAIT_FOR_STOP);
-signal current_state, next_state : state;
+signal current_state, next_state : state := IDLE;
 
 begin
 
