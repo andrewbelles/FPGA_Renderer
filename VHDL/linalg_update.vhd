@@ -42,15 +42,37 @@ end component projection_24b;
 ----------------------- declarations -------------------------------------
   
   signal rx, ry, rz : std_logic_vector(23 downto 0) := (others => '0');
+  signal cx, cy, cz : std_logic_vector(23 downto 0) := (others => '0');
   signal ox, oy, oz : std_logic_vector(23 downto 0) := (others => '0');
+  signal rot1_en    : std_logic := '0';
   signal rot1_set   : std_logic := '0'; 
   signal rot2_set   : std_logic := '0';
 begin 
 
+-- Allow no-opts to run without performing any rotation math 
+process ( clk_port ) 
+begin 
+  if rising_edge( clk_port ) then 
+    if reset_port = '1' then 
+      ox <= (others => '0');
+      oy <= (others => '0');
+      oz <= (others => '0');
+    elsif angle(0) /= x"0000" and angle(1) /= x"0000" then 
+      ox <= cx; 
+      oy <= cy; 
+      oz <= cz; 
+    else 
+      ox <= x; 
+      oy <= y; 
+      oz <= z; 
+    end if; 
+  end if; 
+end process;
+
 rot1: rotation
  port map(
     clk_port   => clk_port,
-    en_port    => load_port, 
+    en_port    => rot1_en, 
     reset_port => reset_port,
     angle      => angle(0),
     dir        => dir(0),
@@ -72,9 +94,9 @@ rot2: rotation
     x          => rx,
     y          => ry,
     z          => rz,
-    nx         => ox,
-    ny         => oy,
-    nz         => oz,
+    nx         => cx,
+    ny         => cy,
+    nz         => cz,
     set_port   => rot2_set); 
 
 project: projection_24b 
