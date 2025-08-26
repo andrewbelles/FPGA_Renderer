@@ -70,33 +70,57 @@ clk <= '1';
 wait for CLK_PERIOD / 2;
 end process;
 
-stim: process
-begin
----- note since clk period and buad period dont line up, no need to shift starting
-    wait for 29 ms;
-    wait for BAUD_PERIOD; 
-    -- start bit (0)
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    -- first data bit
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    rx <= '1';
-    wait for BAUD_PERIOD;
-    rx <= '0';
-    wait for BAUD_PERIOD;
-    -- stop bit (1)
-    rx <= '1';
-    wait;
-END PROCESS;
+--stim: process
+--begin
+------ note since clk period and buad period dont line up, no need to shift starting
+--    wait for 29 ms;
+--    wait for BAUD_PERIOD; 
+--    -- start bit (0)
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    -- first data bit
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    -- stop bit (1)
+--    rx <= '1';
+--    wait for 30 ms;
+    
+--    -- start bit (0)
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    -- first data bit
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '1';
+--    wait for BAUD_PERIOD;
+--    rx <= '0';
+--    wait for BAUD_PERIOD;
+--    -- stop bit (1)
+--    rx <= '1';
+--    wait;
+--END PROCESS;
 end Behavioral;

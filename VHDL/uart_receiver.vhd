@@ -47,7 +47,7 @@ signal baud_reset, bit_reset, shift_en : std_logic := '0';
 signal baud_en, bit_inc : std_logic := '0';
 signal tc_baud2, tc_baud, tc_bit : std_logic := '0';
 -- for double synch input
-signal rx_delayed : std_logic_vector(1 downto 0) := (others => '0');
+signal rx_delayed : std_logic_vector(1 downto 0) := (others => '1'); -- start rx-delayed at 1 (so don't trigger start)
 
 type state is (IDLE, WAIT_TC2, RECENTER_TIMING, WAIT_TC, SHIFT2, DATA_READY, DONE, WAIT_FOR_STOP);
 signal current_state, next_state : state := IDLE;
