@@ -53,9 +53,9 @@ begin
 --------------------------------------------------------------------------
 -- Get perspective from 1/z   
 --------------------------------------------------------------------------
-inv_z_raw <= -signed(z);
-inv_z <= std_logic_vector(near) when inv_z_raw < near else 
-         std_logic_vector(inv_z_raw);  
+--inv_z_raw <= -signed(z);
+inv_z <= std_logic_vector(-signed(z)); --std_logic_vector(near) when inv_z_raw < near else 
+         --std_logic_vector(inv_z_raw);  
 
 get_reciprocal: reciprocal_24b 
   port map( 

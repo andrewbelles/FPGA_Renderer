@@ -112,10 +112,10 @@ signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0');
 signal request_sg, lut_valid, lut_invalid : std_logic := '0';
 
 signal current_points : array_4x3x24_t := (
-    0 => (0 => x"010000", 1 => x"010000", 2 => x"FB0000"),
-    1 => (0 => x"010000", 1 => x"FF0000", 2 => x"F90000"),
-    2 => (0 => x"FF0000", 1 => x"001000", 2 => x"F90000"),
-    3 => (0 => x"FF0000", 1 => x"FF0000", 2 => x"FB0000")
+    0 => (0 => x"00C000", 1 => x"00C000", 2 => x"FF4000"),
+    1 => (0 => x"000000", 1 => x"FF4000", 2 => x"FF4000"),
+    2 => (0 => x"FF4000", 1 => x"00C000", 2 => x"FF4000"),
+    3 => (0 => x"000000", 1 => x"000000", 2 => x"00C000")
 );
 
 -- FSM
