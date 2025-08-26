@@ -38,22 +38,25 @@ end component reciprocal_24b;
   signal reciprocal_set : std_logic := '0'; 
   signal divide_en      : std_logic := '0'; 
   signal divide_set     : std_logic := '0';
+  signal inv_z_raw      : signed(23 downto 0) := (others => '0');
   signal inv_z          : std_logic_vector(23 downto 0) := (others => '0'); 
   signal reciprocal_sg  : std_logic_vector(23 downto 0) := (others => '0'); 
   signal Wc_reciprocal  : signed(23 downto 0) := (others => '0');
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
   signal Xc, Yc         : signed(23 downto 0) := (others => '0');
-  signal Xc_wide        : signed(47 downto 0) := (others => '0');
-  signal Yc_wide        : signed(47 downto 0) := (others => '0');
 
-  constant m00          : signed(23 downto 0) := x"002699";
-  constant m11          : signed(23 downto 0) := x"002699";
-  constant b            : signed(23 downto 0) := x"000080";
+  constant m00          : signed(23 downto 0) := x"001000";
+  constant m11          : signed(23 downto 0) := x"001000";
+  constant b            : signed(23 downto 0) := x"001000";
+  constant near         : signed(23 downto 0) := x"002000";
 begin 
 --------------------------------------------------------------------------
 -- Get perspective from 1/z   
 --------------------------------------------------------------------------
-inv_z <= std_logic_vector( -signed(z)); 
+inv_z_raw <= -signed(z);
+inv_z <= std_logic_vector(near) when inv_z_raw < near else 
+         std_logic_vector(inv_z_raw);  
+
 get_reciprocal: reciprocal_24b 
   port map( 
     clk_port   => clk_port, 
