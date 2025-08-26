@@ -56,11 +56,12 @@ component system_clock_generation is
         system_clk_port		: out std_logic);
 end component;
 component graphics_manager is
-    Port ( sys_clk	   : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
+    Port (
+       sys_clk	           : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
        points              : in array_4x16_t;
        draw_new_points     : in std_logic;
-       ready_to_draw            : out std_logic;
-       done_drawing             : out std_logic;
+       ready_to_draw       : out std_logic;
+       done_drawing        : out std_logic;
        red                 : out std_logic_vector(3 downto 0);
        green               : out std_logic_vector(3 downto 0);
        blue                : out std_logic_vector(3 downto 0);
@@ -112,10 +113,10 @@ signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0');
 signal request_sg, lut_valid, lut_invalid : std_logic := '0';
 
 signal current_points : array_4x3x24_t := (
-    0 => (0 => x"032000", 1 => x"032000", 2 => x"00A000"),
-    1 => (0 => x"032000", 1 => x"FCE000", 2 => x"FF6000"),
-    2 => (0 => x"FCE000", 1 => x"032000", 2 => x"FF6000"),
-    3 => (0 => x"FCE000", 1 => x"FCE000", 2 => x"00A000")
+    0 => (0 => x"00A000", 1 => x"00A000", 2 => x"005000"),
+    1 => (0 => x"00A000", 1 => x"FF6000", 2 => x"FFB000"),
+    2 => (0 => x"FF6000", 1 => x"00A000", 2 => x"FFB000"),
+    3 => (0 => x"FF6000", 1 => x"FF6000", 2 => x"005000")
 );
 
 -- FSM

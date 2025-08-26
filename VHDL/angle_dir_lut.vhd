@@ -81,21 +81,24 @@ architecture behavioral of angle_dir_lut is
     12 => ("10", "10"),      -- w +Z
     13 => ("00", "00")); -- initialization (no direction)
 
+  constant pos : std_logic_vector(15 downto 0) := x"0007";
+  constant neg : std_logic_vector(15 downto 0) := x"FFF9";
+  
   constant angles_table : angles_rom_t := (
     -- idx : (rot0_dir, rot1_dir)
     0  => (x"0000", x"0000"), -- invalid
-    1  => (x"02CB", x"02CB"),       -- a +Y
-    2  => (x"61BD", x"61BD"),       -- d -Y
-    3  => (x"61BD", x"61BD"),       -- e -X
-    4  => (x"02CB", x"02CB"),       -- i +X & +Y
-    5  => (x"02CB", x"02CB"),       -- j +Y & +Z
-    6  => (x"61BD", x"61BD"),       -- k -X & -Y
-    7  => (x"61BD", x"61BD"),       -- l -Y & -Z
-    8  => (x"61BD", x"61BD"),       -- o -X & -Z
-    9  => (x"02CB", x"02CB"),       -- q +X
-    10 => (x"61BD", x"61BD"),       -- s -Z
-    11 => (x"02CB", x"02CB"),       -- u +X & +Z
-    12 => (x"02CB", x"02CB"),      -- w +Zdd
+    1  => (pos, pos),       -- a +Y
+    2  => (neg, neg),       -- d -Y
+    3  => (neg, neg),       -- e -X
+    4  => (pos, pos),       -- i +X & +Y
+    5  => (pos, pos),       -- j +Y & +Z
+    6  => (neg, neg),       -- k -X & -Y
+    7  => (neg, neg),       -- l -Y & -Z
+    8  => (neg, neg),       -- o -X & -Z
+    9  => (pos, pos),       -- q +X
+    10 => (neg, neg),       -- s -Z
+    11 => (pos, pos),       -- u +X & +Z
+    12 => (pos, pos),      -- w +Zdd
     13 => (x"0000", x"0000")); -- initialization (rotation 0 degrees)
   
 begin 
