@@ -48,14 +48,13 @@ end component reciprocal_24b;
   constant m00          : signed(23 downto 0) := x"001000";
   constant m11          : signed(23 downto 0) := x"001000";
   constant b            : signed(23 downto 0) := x"000080";
-  constant near         : signed(23 downto 0) := x"002000";
+  constant near_clip    : signed(23 downto 0) := x"002000";
 begin 
 --------------------------------------------------------------------------
 -- Get perspective from 1/z   
 --------------------------------------------------------------------------
---inv_z_raw <= -signed(z);
-inv_z <= std_logic_vector(-signed(z)); --std_logic_vector(near) when inv_z_raw < near else 
-         --std_logic_vector(inv_z_raw);  
+inv_z <= std_logic_vector(near_clip) when abs(inv_z_raw) < near_clip else 
+         std_logic_vector(inv_z_raw);  
 
 get_reciprocal: reciprocal_24b 
   port map( 
