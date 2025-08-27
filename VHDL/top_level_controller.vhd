@@ -105,8 +105,7 @@ signal load_port_sg, set_port_sg : std_logic := '0';
 signal reset_port_sg : std_logic := '1';
 signal angle_sg : array_2x16_t := (others => (others => '0'));
 signal dir_sg : array_2x2_t := (others => (others => '0'));
-signal points_sg : array_4x3x24_t  := (others => (others => (others => '0'))); 
-signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
+signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0')); -- currently sending these to graphics
 signal ready_to_draw_sg, done_drawing_sg : std_logic := '0';
 signal new_points_sg : array_4x3x24_t := (others => (others => (others => '0')));
 
