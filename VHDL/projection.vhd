@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity projection_24b is 
+entity project_point is 
 port( 
   clk_port     : in std_logic;
   load_port    : in std_logic; 
@@ -11,9 +11,9 @@ port(
   x, y, z      : in std_logic_vector(23 downto 0); 
   point_packet : out std_logic_vector(15 downto 0); -- (8 high x),(8 low y)
   set_port     : out std_logic);
-end projection_24b; 
+end project_point; 
 
-architecture behavioral of projection_24b is 
+architecture behavioral of project_point is 
 ----------------------- component declarations ---------------------------
 component reciprocal_24b 
   port (
