@@ -24,7 +24,7 @@ component newton_lut  -- gets seed for newtons method
     set_port   : out std_logic);  
 end component newton_lut; 
 
-component newton_24b  -- interface that executes 2 step newtons-rhapson   
+component newtons_method  -- interface that executes 2 step newtons-rhapson   
   port (
     clk_port   : in std_logic; 
     load_port  : in std_logic; 
@@ -33,7 +33,7 @@ component newton_24b  -- interface that executes 2 step newtons-rhapson
     seed       : in std_logic_vector(23 downto 0);   -- q6.17
     root       : out std_logic_vector(23 downto 0);  -- q6.17
     set_port   : out std_logic); 
-end component newton_24b;
+end component newtons_method;
 ----------------------- declarations -------------------------------------
 -- state declarations 
   type state_type is ( idle, load, normalize, seed, newtons, done );   
@@ -48,7 +48,7 @@ end component newton_24b;
   signal newton_en     : std_logic := '0';
   signal set_en        : std_logic := '0';
 
--- set_port signal from newton_24b 
+-- set_port signal from newtons_method 
   signal newton_set    : std_logic := '0';
 
 -- constant addr,seed pair being fetched. only right once state > seed  
@@ -159,7 +159,7 @@ newton_seed <= fetched_seed;
 --------------------------------------------------------------------------
 -- Newton's Method 
 --------------------------------------------------------------------------
-get_reciprocal: newton_24b
+get_reciprocal: newtons_method
  port map(
     clk_port   => clk_port,
     load_port  => newton_en,
