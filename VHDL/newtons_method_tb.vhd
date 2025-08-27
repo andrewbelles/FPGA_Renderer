@@ -75,7 +75,7 @@ begin
   wait for clk_period; 
   reset_port <= '0'; 
   mantissa <= x"400000"; -- 1.0 
-  addr <= mantissa(21 downto 11);
+  addr <= mantissa(21 downto 12);
   wait for 15*clk_period; 
 
   -- Expected: Seed = 0x01F0B7, Root = 0x00107E
@@ -83,7 +83,7 @@ begin
   wait for clk_period; 
   reset_port <= '0'; 
   mantissa <= x"440000"; -- 1.0625
-  addr <= mantissa(21 downto 11);
+  addr <= mantissa(21 downto 12);
   wait for 15*clk_period; 
 
   -- Expected: Seed = 0x01E2B8, Root = 0x0010F8
@@ -91,7 +91,7 @@ begin
   wait for clk_period; 
   reset_port <= '0'; 
   mantissa <= x"480000"; -- 1.125 
-  addr <= mantissa(21 downto 11);
+  addr <= mantissa(21 downto 12);
   wait for 15*clk_period; 
 
   -- Expected: Seed = 0x018309, Root = 0x00152A
@@ -99,7 +99,7 @@ begin
   wait for clk_period; 
   reset_port <= '0'; 
   mantissa <= x"700000"; -- 1.75
-  addr <= mantissa(21 downto 11);
+  addr <= mantissa(21 downto 12);
   wait; 
 end process; 
 

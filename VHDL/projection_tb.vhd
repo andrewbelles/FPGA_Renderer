@@ -8,7 +8,7 @@ end projection_tb;
 
 architecture testbench of projection_tb is 
 
-component projection is 
+component project_point is 
   port( 
     clk_port     : in std_logic;
     load_port    : in std_logic; 
@@ -16,7 +16,7 @@ component projection is
     x, y, z      : in std_logic_vector(23 downto 0); 
     point_packet : out std_logic_vector(15 downto 0); -- (8 high x),(8 low y)
     set_port     : out std_logic);
-end component projection; 
+end component project_point; 
 
   signal clk_port     : std_logic := '0'; 
   signal load_port    : std_logic := '0'; 
@@ -28,7 +28,7 @@ end component projection;
   constant clk_period : time := 10 ns; 
 begin 
 
-uut: projection 
+uut: project_point
   port map( 
     clk_port     => clk_port, 
     load_port    => load_port, 

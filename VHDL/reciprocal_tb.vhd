@@ -48,7 +48,6 @@ end process clock_proc;
 stim_proc: process 
 begin 
 
-  -- expect x001000
   reset_port <= '1';
   wait for 2*clk_period; 
   value <= x"001000"; -- 1.0 
@@ -56,9 +55,9 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
-  -- expect x000800
+  -- 0.5 
   reset_port <= '1';
   reset_port <= '1';
   wait for 2*clk_period; 
@@ -67,9 +66,9 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
-  -- expect x0002E9
+  -- 0.1818
   reset_port <= '1';
   wait for 2*clk_period; 
   value <= x"005800"; -- 5.5 
@@ -77,7 +76,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
   -- expect x000141
   reset_port <= '1';
@@ -87,7 +86,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
   -- expect x000029
   reset_port <= '1';
@@ -97,7 +96,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
   -- expect x0013FB0
   reset_port <= '1';
@@ -107,7 +106,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
   -- expect FFE000
   reset_port <= '1';
@@ -117,7 +116,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
   -- expect FFFE70
   reset_port <= '1';
@@ -127,7 +126,7 @@ begin
   load_port  <= '1'; 
   wait for clk_period;
   load_port  <= '0';
-  wait for 36*clk_period;
+  wait for 15*clk_period;
 
   -- expect FFFFD7
   reset_port <= '1';

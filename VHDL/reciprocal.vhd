@@ -154,7 +154,7 @@ read_seed: newton_lut
 
 -- constantly address, will only be correct once 
 addr <= std_logic_vector(norm(21 downto 12));
-newton_seed <= fetched_seed when lut_set else (others => '0');
+newton_seed <= fetched_seed when lut_set= '1' else (others => '0');
 
 --------------------------------------------------------------------------
 -- Newton's Method 
