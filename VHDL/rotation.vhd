@@ -35,7 +35,7 @@ component set_operands_m24x24 is
     set_port : out std_logic);
 end component set_operands_m24x24;
 
-component rotation_mul_24b is 
+component accumulate_rotation is 
   port (
     clk_port   : in std_logic; 
     load_en    : in std_logic; 
@@ -45,7 +45,7 @@ component rotation_mul_24b is
     products   : in array_4x24_t; 
     nx, ny, nz : out std_logic_vector(23 downto 0);
     set_port   : out std_logic); 
-end component rotation_mul_24b; 
+end component accumulate_rotation; 
 
 ----------------------- local declarations -------------------------------
 -- signals
@@ -179,7 +179,7 @@ begin
   end loop; 
 end process; 
 
-update_point: rotation_mul_24b 
+update_point: accumulate_rotation 
   port map(
     clk_port   => clk_port,
     reset_port => reset_port, 
