@@ -55,6 +55,7 @@ stim_proc: process
 begin 
   -- Products will be computed from 20.0 * trig(pi/4)
   -- That is, (x,y,z) => (20.0, 20.0, 20.0) and products remains const 
+  -- Expect -7.32 ~ FF8ADF and 27.32 ~ 01B521 for non-static outputs in nr 
 
   reset_port <= '1'; 
   load_en    <= '0'; 
