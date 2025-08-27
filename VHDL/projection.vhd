@@ -47,7 +47,7 @@ end component reciprocal_24b;
 
   constant m00          : signed(23 downto 0) := x"001000";
   constant m11          : signed(23 downto 0) := x"001000";
-  constant b            : signed(23 downto 0) := x"001000";
+  constant b            : signed(23 downto 0) := x"000080";
   constant near         : signed(23 downto 0) := x"002000";
 begin 
 --------------------------------------------------------------------------
@@ -125,14 +125,14 @@ begin
       if tx(23) = '1' then 
         round := -round; 
       end if; 
-      tx := shift_right( shift_left(tx, 7) + round, 12) + b;
+      tx := shift_right( shift_left(tx, 4) + round, 12) + b;
 
       round := x"000800";
       ty := yndc; 
       if ty(23) = '1' then 
         round := -round; 
       end if; 
-      ty := shift_right( shift_left(-ty, 7) + round, 12) + b;
+      ty := shift_right( shift_left(-ty, 4) + round, 12) + b;
 
       -- latch point packet 
       point_packet <= std_logic_vector(tx(7 downto 0)) & std_logic_vector(ty(7 downto 0));

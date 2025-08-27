@@ -39,6 +39,7 @@ component rotation_mul_24b is
   port (
     clk_port   : in std_logic; 
     load_en    : in std_logic; 
+    reset_port : in std_logic;
     dir        : in std_logic_vector(1 downto 0);
     static     : in std_logic_vector(23 downto 0);
     products   : in array_4x24_t; 
@@ -180,15 +181,16 @@ end process;
 
 update_point: rotation_mul_24b 
   port map(
-    clk_port => clk_port,
-    load_en  => rotation_load, 
-    dir      => dir, 
-    static   => operands_sg(0),
-    products => products_sg, 
-    nx       => nx, 
-    ny       => ny, 
-    nz       => nz, 
-    set_port => update_set); 
+    clk_port   => clk_port,
+    reset_port => reset_port, 
+    load_en    => rotation_load, 
+    dir        => dir, 
+    static     => operands_sg(0),
+    products   => products_sg, 
+    nx         => nx, 
+    ny         => ny, 
+    nz         => nz, 
+    set_port   => update_set); 
 
 process( clk_port ) 
 begin 
@@ -197,8 +199,6 @@ begin
       set_port <= '0'; 
     elsif update_set = '1' then 
       set_port <= '1';
-    else 
-      set_port <= '0'; 
     end if; 
   end if; 
 end process; 

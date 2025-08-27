@@ -7,6 +7,7 @@ entity rotation_mul_24b is
 port( 
   clk_port   : in std_logic; 
   load_en    : in std_logic; 
+  reset_port : in std_logic; 
   dir        : in std_logic_vector(1 downto 0); 
   static     : in std_logic_vector(23 downto 0);
   products   : in array_4x24_t;  
@@ -43,7 +44,12 @@ begin
   s1 := (others => '0');
   s2 := (others => '0');
   if rising_edge( clk_port ) then 
-    if load_en = '1' then 
+    if reset_port = '1' then 
+      nx <= (others => '0'); 
+      ny <= (others => '0'); 
+      nz <= (others => '0'); 
+      set_port <= '0'; 
+    elsif load_en = '1' then 
       s1 := sProducts(0) + sProducts(3);
       s2 := sProducts(1) + sProducts(2);
       set_port <= '1';
@@ -63,6 +69,8 @@ begin
         when others => 
           null; 
       end case; 
+    else 
+      set_port <= '0'; 
     end if; 
   end if; 
 end process compute_rotation; 

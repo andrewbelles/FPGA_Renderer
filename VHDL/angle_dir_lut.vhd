@@ -81,8 +81,8 @@ architecture behavioral of angle_dir_lut is
     12 => ("10", "10"),      -- w +Z
     13 => ("00", "00")); -- initialization (no direction)
 
-  constant pos : std_logic_vector(15 downto 0) := x"0007";
-  constant neg : std_logic_vector(15 downto 0) := x"FFF9";
+  constant pos : std_logic_vector(15 downto 0) := x"0047";
+  constant neg : std_logic_vector(15 downto 0) := x"FFB9";
   
   constant angles_table : angles_rom_t := (
     -- idx : (rot0_dir, rot1_dir)

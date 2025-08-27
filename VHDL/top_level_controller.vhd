@@ -100,7 +100,8 @@ signal red_sg, green_sg, blue_sg  : std_logic_vector(3 downto 0) := (others => '
 signal draw_new_points_sg : std_logic := '0';
 
 -- math signals
-signal load_port_sg, reset_port_sg, set_port_sg : std_logic := '0';
+signal load_port_sg, set_port_sg : std_logic := '0';
+signal reset_port_sg : std_logic := '1';
 signal angle_sg : array_2x16_t := (others => (others => '0'));
 signal dir_sg : array_2x2_t := (others => (others => '0'));
 signal points_sg : array_4x3x24_t  := (others => (others => (others => '0'))); 
@@ -120,9 +121,13 @@ signal current_points : array_4x3x24_t := (
 );
 
 -- FSM
-type state is (INIT, IDLE, MAP_PRESS, MATH, WAIT_SCREEN, START_DRAW, DRAW);
+type state is (INIT, IDLE, MAP_PRESS, WAIT_MATH, MATH, WAIT_SCREEN, START_DRAW, DRAW);
 signal next_state, current_state : state := INIT;
 signal map_press_control, init_control : std_logic := '0';
+
+signal wait_en, wait_tc : std_logic := '0';
+signal math_wait_counter : unsigned(4 downto 0) := (others => '0');
+
 begin
 clock : system_clock_generation
 Port Map(input_clk_port => clk_ext_port,
@@ -183,7 +188,21 @@ begin
     end if;
 end process;
 
-ns_logic : process(current_state, lut_valid, lut_invalid, data_valid, set_port_sg, ready_to_draw_sg, done_drawing_sg)
+wait_tc <= '1' when math_wait_counter = 20 else '0';
+process(sys_clk)
+begin
+    if(rising_edge(sys_clk)) then
+        if(wait_en = '1') then
+            if(wait_tc = '1') then
+                math_wait_counter <= (others => '0');
+            else 
+                math_wait_counter <= math_wait_counter + 1;
+            end if;
+        end if;
+    end if;
+end process;
+
+ns_logic : process(current_state, lut_valid, lut_invalid, data_valid, set_port_sg, ready_to_draw_sg, done_drawing_sg, wait_tc)
 begin
     next_state <= current_state;
     case current_state is
@@ -197,9 +216,13 @@ begin
             end if;
         when MAP_PRESS =>
             if(lut_valid = '1' and lut_invalid = '0') then -- valid index from LUT (proceed to MATH)
-                next_state <= MATH;
+                next_state <= WAIT_MATH;
             elsif(lut_invalid = '1'and lut_valid = '0') then -- invalid index from LUT (go back to IDLE)
                 next_state <= IDLE;
+            end if;
+        when WAIT_MATH => -- waits for cycle so that angle and dir propagate down math
+            if(wait_tc = '1') then
+                next_state <= MATH;
             end if;
         when MATH => 
             if(set_port_sg = '1') then
@@ -228,11 +251,15 @@ begin
     load_port_sg <= '0';
     reset_port_sg <= '1';
     draw_new_points_sg <= '0';
+    wait_en <= '0';
     case current_state is
         when INIT =>
             init_control <= '1';
         when MAP_PRESS =>
             map_press_control <= '1';
+        when WAIT_MATH =>
+            reset_port_sg <= '0';
+            wait_en <= '1';
         when MATH =>
             load_port_sg <= '1';
             reset_port_sg <= '0';
@@ -247,10 +274,10 @@ point_proc : process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
         if(init_control = '1') then
-            current_points(0)(0 to 2) <= (x"032000", x"032000", x"00A000");
-            current_points(1)(0 to 2) <= (x"032000", x"FCE000", x"FF6000");
-            current_points(2)(0 to 2) <= (x"FCE000", x"032000", x"FF6000");
-            current_points(3)(0 to 2) <= (x"FCE000", x"FCE000", x"00A000"); 
+            current_points(0)(0 to 2) <= (x"00C000", x"00C000", x"FF4000");
+            current_points(1)(0 to 2) <= (x"00C000", x"FF4000", x"00C000");
+            current_points(2)(0 to 2) <= (x"FF4000", x"00C000", x"00C000");
+            current_points(3)(0 to 2) <= (x"FF4000", x"FF4000", x"FF4000"); 
         -- update current_points when done with math
         elsif(set_port_sg = '1') then
             current_points <= new_points_sg;
