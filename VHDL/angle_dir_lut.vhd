@@ -16,13 +16,14 @@ use work.array_types.all;
 
 entity angle_dir_lut is 
 port( 
-  clk_port   : in std_logic; 
-  request    : in std_logic;
-  addr       : in std_logic_vector(7 downto 0); 
-  dirs       : out array_2x2_t; 
-  angles     : out array_2x16_t;
-  lut_valid  : out std_logic;
-  lut_invalid : out std_logic);
+  clk_port       : in std_logic; 
+  request        : in std_logic;
+  addr           : in std_logic_vector(7 downto 0); 
+  reset_press    : out std_logic;
+  dirs           : out array_2x2_t; 
+  angles         : out array_2x16_t;
+  lut_valid      : out std_logic;
+  lut_invalid    : out std_logic);
 end entity angle_dir_lut;
 
 architecture behavioral of angle_dir_lut is 
@@ -34,13 +35,13 @@ architecture behavioral of angle_dir_lut is
   signal read_angles : array_2x16_t := (others => (others => '0'));
   signal read_dirs   : array_2x2_t  := (others => (others => '0'));
   constant ascii_table : ascii_rom_t := (
-    0 => 13, -- for init
+    0 => 14, -- for init
     1 to 96 => 0,
     97  => 1, -- a 
     98  => 0, 
     99  => 0,
     100 => 2, -- d
-    101 => 3, -- e
+    101 => 10, -- e
     102 => 0,
     103 => 0,
     104 => 0,
@@ -52,13 +53,13 @@ architecture behavioral of angle_dir_lut is
     110 => 0, 
     111 => 8, -- o
     112 => 0,
-    113 => 9,  -- q
-    114 => 0, 
-    115 => 10,  -- s
+    113 => 12,  -- q
+    114 => 13, -- r (reset)
+    115 => 3,  -- s
     116 => 0,
     117 => 11, -- u
     118 => 0, 
-    119 => 12,  -- w
+    119 => 9,  -- w
     120 => 0, 
     121 => 0,
     122 => 0,
@@ -79,7 +80,9 @@ architecture behavioral of angle_dir_lut is
     10 => ("10", "10"),       -- s -Z
     11 => ("00", "10"),       -- u +X & +Z
     12 => ("10", "10"),      -- w +Z
-    13 => ("00", "00")); -- initialization (no direction)
+    13 => ("00", "00"), -- reset
+    14 => ("00", "00")); -- initialization (no direction)
+
 
   constant pos : std_logic_vector(15 downto 0) := x"0047";
   constant neg : std_logic_vector(15 downto 0) := x"FFB9";
@@ -99,7 +102,8 @@ architecture behavioral of angle_dir_lut is
     10 => (neg, neg),       -- s -Z
     11 => (pos, pos),       -- u +X & +Z
     12 => (pos, pos),       -- w +Z
-    13 => (x"0000", x"0000")); -- initialization (rotation 0 degrees)
+    13 => (x"0000", x"0000"),-- reset
+    14 => (x"0000", x"0000")); -- initialization (rotation 0 degrees)
   
 begin 
  
@@ -115,15 +119,20 @@ begin
     -- defaults
       lut_valid <= '0';
       lut_invalid <= '0';
+      reset_press <= '0';
       if(request = '1') then -- turns on if we have a request from central controller
           if(is_valid = '1') then -- valid address (idx not 0)
-            lut_valid <= '1'; 
-            dirs   <= read_dirs; 
-            angles <= read_angles;
+              lut_valid <= '1'; 
+              if(ascii_idx = 13) then -- reset
+                  reset_press <= '1'; -- takes you back to init state
+              else
+                  dirs   <= read_dirs; 
+                  angles <= read_angles;
+              end if;
           else -- invalid address (idx 0
-            lut_invalid <= '1'; 
-            dirs <= (others => (others => '0'));
-            angles <= (others => (others => '0'));
+              lut_invalid <= '1'; 
+              dirs <= (others => (others => '0'));
+              angles <= (others => (others => '0'));
           end if; 
       end if;
     end if;

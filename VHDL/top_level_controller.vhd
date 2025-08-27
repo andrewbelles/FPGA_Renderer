@@ -83,12 +83,13 @@ end component;
 
 component angle_dir_lut is
     port( 
-  clk_port   : in std_logic; 
-  request    : in std_logic;
-  addr       : in std_logic_vector(7 downto 0); 
-  dirs       : out array_2x2_t; 
-  angles     : out array_2x16_t;
-  lut_valid : out std_logic;
+  clk_port      : in std_logic; 
+  request       : in std_logic;
+  addr          : in std_logic_vector(7 downto 0); 
+  reset_press   : out std_logic;
+  dirs          : out array_2x2_t; 
+  angles        : out array_2x16_t;
+  lut_valid     : out std_logic;
   lut_invalid : out std_logic);
 end component;
 -- signals 
@@ -111,8 +112,7 @@ signal new_points_sg : array_4x3x24_t := (others => (others => (others => '0')))
 
 -- lut
 signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0'); 
-signal request_sg, lut_valid, lut_invalid : std_logic := '0';
-
+signal request_sg, lut_valid, lut_invalid, reset_press_sg : std_logic := '0';
 signal current_points : array_4x3x24_t := (
     0 => (0 => x"00C000", 1 => x"00C000", 2 => x"FF4000"),
     1 => (0 => x"000000", 1 => x"FF4000", 2 => x"FF4000"),
@@ -166,6 +166,7 @@ angle_dir: angle_dir_lut
              request => request_sg,
              addr => addr_reg,
              dirs => dir_sg,
+             reset_press => reset_press_sg,
              angles => angle_sg,
              lut_valid => lut_valid,
              lut_invalid => lut_invalid);
@@ -202,7 +203,7 @@ begin
     end if;
 end process;
 
-ns_logic : process(current_state, lut_valid, lut_invalid, data_valid, set_port_sg, ready_to_draw_sg, done_drawing_sg, wait_tc)
+ns_logic : process(current_state, lut_valid, lut_invalid, data_valid, set_port_sg, ready_to_draw_sg, done_drawing_sg, wait_tc, reset_press_sg)
 begin
     next_state <= current_state;
     case current_state is
@@ -216,7 +217,11 @@ begin
             end if;
         when MAP_PRESS =>
             if(lut_valid = '1' and lut_invalid = '0') then -- valid index from LUT (proceed to MATH)
-                next_state <= WAIT_MATH;
+                if(reset_press_sg = '1') then --reset press
+                    next_state <= INIT; 
+                else -- not reset press
+                    next_state <= WAIT_MATH;
+                end if;
             elsif(lut_invalid = '1'and lut_valid = '0') then -- invalid index from LUT (go back to IDLE)
                 next_state <= IDLE;
             end if;

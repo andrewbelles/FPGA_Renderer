@@ -104,7 +104,7 @@ begin
     rx <= '0';
     wait for BAUD_PERIOD;
     -- first data bit
-    rx <= '1';
+    rx <= '0';
     wait for BAUD_PERIOD;
     rx <= '1';
     wait for BAUD_PERIOD;
