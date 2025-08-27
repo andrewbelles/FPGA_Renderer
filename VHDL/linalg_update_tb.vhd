@@ -31,6 +31,7 @@ end component update_point;
   signal set_port     : std_logic := '0'; 
 
   constant clk_period : time := 10 ns; 
+  constant deg5       : std_logic_vector(15 downto 0) := x"0165";
 begin 
 
 uut: update_point 
@@ -57,56 +58,116 @@ end process clock_proc;
 
 stim_proc: process 
 begin 
+  load_port  <= '0';
+  reset_port <= '1'; 
+  wait for 2*clk_period; 
   load_port <= '1'; 
-  x <= x"014000";      -- -10 
-  y <= x"fec000";      -- -10 
-  z <= x"fec000";      -- -40
-  angle(0) <= x"0861"; --  30
-  angle(1) <= x"0430"; --  90
+  reset_port <= '0'; 
+  x <= x"01A000"; -- 12.0  
+  y <= x"01A000"; -- 12.0 
+  z <= x"FE6000"; -- -12.0
+  angle(0) <= deg5; -- 5
+  angle(1) <= deg5; -- 5
   dir(0)   <= "01";    -- x
   dir(1)   <= "00";    -- y 
-  wait for 200*clk_period; 
+  wait for 25*clk_period; 
 
   load_port  <= '0';
   reset_port <= '1'; 
   wait for 2*clk_period; 
   load_port  <= '1'; 
   reset_port <= '0';
-  x <= x"00A000";      --  10 
-  y <= x"FF6000";      -- -10 
-  z <= x"FD8000";      -- -40
-  angle(0) <= x"0861"; --  30
-  angle(1) <= x"1922"; --  90
+  x <= x"01A000"; -- 12.0 
+  y <= x"FE6000"; -- -12.0
+  z <= x"01A000"; -- 12.0
+  angle(0) <= deg5; --  5
+  angle(1) <= deg5; --  5
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  wait for 200*clk_period; 
+  wait for 25*clk_period; 
 
   load_port  <= '0';
   reset_port <= '1'; 
   wait for 2*clk_period; 
   load_port  <= '1'; 
   reset_port <= '0';
-  x <= x"000000";      --   0 
-  y <= x"00A000";      --  10 
-  z <= x"FD8000";      -- -40
-  angle(0) <= x"0861"; --  30
-  angle(1) <= x"1922"; --  90
+  x <= x"FE6000"; -- -12.0 
+  y <= x"01A000"; -- -12.0
+  z <= x"FE6000"; -- -12.0
+  angle(0) <= deg5; --  5
+  angle(1) <= deg5; --  5
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
-  wait for 200*clk_period; 
+  wait for 25*clk_period; 
 
   load_port  <= '0';
   reset_port <= '1'; 
   wait for 2*clk_period; 
   load_port  <= '1'; 
   reset_port <= '0';
-  x <= x"000000";      --  0 
-  y <= x"000000";      --  0 
-  z <= x"FEC000";      -- -20
-  angle(0) <= x"0861"; --  30
-  angle(1) <= x"1922"; --  90
+  x <= x"FE6000"; -- -12.0 
+  y <= x"FE6000"; -- -12.0
+  z <= x"FE6000"; -- -12.0
+  angle(0) <= deg5; --  5
+  angle(1) <= deg5; --  5
   dir(0)   <= "00";    -- x
   dir(1)   <= "01";    -- y
+  wait for 25*clk_period; 
+  
+  load_port  <= '0';
+  reset_port <= '1'; 
+  wait for 2*clk_period; 
+  load_port <= '1'; 
+  reset_port <= '0'; 
+  x <= x"01A000"; -- 12.0  
+  y <= x"01A000"; -- 12.0 
+  z <= x"FE6000"; -- -12.0
+  angle(0) <= deg5; -- 5
+  angle(1) <= deg5; -- 5
+  dir(0)   <= "01";    -- x
+  dir(1)   <= "10";    -- y 
+  wait for 25*clk_period; 
+
+  load_port  <= '0';
+  reset_port <= '1'; 
+  wait for 2*clk_period; 
+  load_port  <= '1'; 
+  reset_port <= '0';
+  x <= x"01A000"; -- 12.0 
+  y <= x"FE6000"; -- -12.0
+  z <= x"01A000"; -- 12.0
+  angle(0) <= deg5; --  5
+  angle(1) <= deg5; --  5
+  dir(0)   <= "01";    -- x
+  dir(1)   <= "10";    -- y
+  wait for 25*clk_period; 
+
+  load_port  <= '0';
+  reset_port <= '1'; 
+  wait for 2*clk_period; 
+  load_port  <= '1'; 
+  reset_port <= '0';
+  x <= x"FE6000"; -- -12.0 
+  y <= x"01A000"; -- -12.0
+  z <= x"FE6000"; -- -12.0
+  angle(0) <= deg5; --  5
+  angle(1) <= deg5; --  5
+  dir(0)   <= "01";    -- x
+  dir(1)   <= "10";    -- y
+  wait for 25*clk_period; 
+
+  load_port  <= '0';
+  reset_port <= '1'; 
+  wait for 2*clk_period; 
+  load_port  <= '1'; 
+  reset_port <= '0';
+  x <= x"FE6000"; -- -12.0 
+  y <= x"FE6000"; -- -12.0
+  z <= x"FE6000"; -- -12.0
+  angle(0) <= deg5; --  5
+  angle(1) <= deg5; --  5
+  dir(0)   <= "01";    -- x
+  dir(1)   <= "10";    -- y
   wait; 
 end process stim_proc;
 

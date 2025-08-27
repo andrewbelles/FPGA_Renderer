@@ -48,15 +48,16 @@ end process clock_proc;
 stim_proc: process 
 begin 
 
+  -- Expect x 
   load_port  <= '1';
   wait for clk_period; 
   load_port <= '0';
-  x <= x"FF6000"; -- 5.0 
-  y <= x"FF6000"; -- 5.0 
-  z <= x"FD8000"; -- -20.0
-  wait for 49*clk_period; 
+  x <= x"01A000"; -- 12.0  
+  y <= x"01A000"; -- 12.0 
+  z <= x"FE6000"; -- -12.0
+  wait for 20*clk_period; 
 
-  -- (45, 73) := (0x2D, 0x49)
+  -- Expect x
   reset_port <= '1'; 
   load_port  <= '0';
   wait for 2*clk_period; 
@@ -64,12 +65,12 @@ begin
   load_port  <= '1';
   wait for clk_period; 
   load_port  <= '0';
-  x <= x"00A000"; -- -20.0 
-  y <= x"FF6000"; -- 10.0
-  z <= x"FD8000"; -- -40.0
-  wait for 50*clk_period; 
+  x <= x"01A000"; -- 12.0 
+  y <= x"FE6000"; -- -12.0
+  z <= x"01A000"; -- 12.0
+  wait for 20*clk_period; 
   
-  -- (45, 73) := (0x2D, 0x49)
+  -- Expect 0x
   reset_port <= '1'; 
   load_port  <= '0';
   wait for 2*clk_period; 
@@ -77,13 +78,12 @@ begin
   load_port  <= '1';
   wait for clk_period; 
   load_port  <= '0';
-  x <= x"000000"; -- -20.0 
-  y <= x"00A000"; -- 10.0
-  z <= x"FD8000" ; -- -40.0
-  -- wait for 50*clk_period; 
-  wait for 50*clk_period; 
+  x <= x"FE6000"; -- -12.0 
+  y <= x"01A000"; -- -12.0
+  z <= x"FE6000"; -- -12.0
+  wait for 20*clk_period;
   
-  -- (45, 73) := (0x2D, 0x49)
+    -- Expect x
   reset_port <= '1'; 
   load_port  <= '0';
   wait for 2*clk_period; 
@@ -91,13 +91,10 @@ begin
   load_port  <= '1';
   wait for clk_period; 
   load_port  <= '0';
-  x <= x"000000"; -- -20.0 
-  y <= x"000000"; -- 10.0
-  z <= x"FEC000"; -- -40.0
-  -- wait for 50*clk_period; 
+  x <= x"FE6000"; -- -12.0 
+  y <= x"FE6000"; -- -12.0
+  z <= x"FE6000"; -- -12.0
   wait; 
-
-
 end process stim_proc;
 
 end architecture testbench; 
