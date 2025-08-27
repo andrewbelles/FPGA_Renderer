@@ -28,7 +28,7 @@ end component;
   signal set_port     : std_logic := '0'; 
 
   constant static     : std_logic_vector(23 downto 0) := x"014000";
-  constant products   : array_4x24_t := (x"00A0000", x"011521", x"00A0000", x"FEEADF");
+  constant products   : array_4x24_t := (x"00A000", x"011521", x"00A000", x"FEEADF");
   constant clk_period : time := 10 ns; 
 begin 
 
