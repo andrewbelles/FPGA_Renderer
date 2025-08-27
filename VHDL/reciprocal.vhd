@@ -52,6 +52,7 @@ end component newtons_method;
   signal newton_set    : std_logic := '0';
 
 -- constant addr,seed pair being fetched. only right once state > seed  
+  signal lut_set       : std_logic := '0';
   signal addr          : std_logic_vector(9 downto 0)  := (others => '0');
   signal fetched_seed  : std_logic_vector(23 downto 0) := (others => '0');
 
@@ -64,7 +65,6 @@ end component newtons_method;
 -- signals for newtons method 
   signal mantissa      : std_logic_vector(23 downto 0) := (others => '0');
   signal newton_seed   : std_logic_vector(23 downto 0) := (others => '0');
-  signal bufr_seed     : std_logic_vector(23 downto 0) := (others => '0');
   signal root          : std_logic_vector(23 downto 0) := (others => '0');
 
 -- ensure numeric stability
@@ -150,11 +150,11 @@ read_seed: newton_lut
     reset_port => reset_port, 
     addr       => addr, 
     seed       => fetched_seed, 
-    set_port   => OPEN);
+    set_port   => lut_set);
 
 -- constantly address, will only be correct once 
 addr <= std_logic_vector(norm(21 downto 12));
-newton_seed <= fetched_seed;
+newton_seed <= fetched_seed when lut_set else (others => '0');
 
 --------------------------------------------------------------------------
 -- Newton's Method 
@@ -167,8 +167,7 @@ get_reciprocal: newtons_method
     mantissa   => mantissa,
     seed       => newton_seed,
     root       => root,
-    set_port   => newton_set
-);
+    set_port   => newton_set);
 
 mantissa <= std_logic_vector(norm);
 
