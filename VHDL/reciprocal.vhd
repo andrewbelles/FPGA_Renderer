@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity reciprocal_24b is 
+entity reciprocal is 
   port (
     clk_port   : in std_logic; 
     load_port  : in std_logic;
@@ -11,9 +11,9 @@ entity reciprocal_24b is
     value      : in std_logic_vector(23 downto 0);    -- q11.12 value to mul invert    
     reciprocal : out std_logic_vector(23 downto 0);   -- q11.12
     set_port   : out std_logic); 
-end entity reciprocal_24b;
+end entity reciprocal;
 
-architecture behavioral of reciprocal_24b is 
+architecture behavioral of reciprocal is 
 ----------------------- components ---------------------------------------
 component newton_lut  -- gets seed for newtons method 
   port (

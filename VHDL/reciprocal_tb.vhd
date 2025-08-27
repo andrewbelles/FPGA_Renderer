@@ -8,7 +8,7 @@ end reciprocal_tb;
  
 architecture testbench of reciprocal_tb is 
 ----------------------- component declarations ---------------------------
-component reciprocal_24b is 
+component reciprocal is 
   port (
     clk_port   : in std_logic; 
     load_port  : in std_logic;
@@ -16,27 +16,27 @@ component reciprocal_24b is
     value      : in std_logic_vector(23 downto 0);    -- q11.12 value to mul invert    
     reciprocal : out std_logic_vector(23 downto 0);   -- q11.12 reciprocal 
     set_port   : out std_logic); 
-end component reciprocal_24b;
+end component reciprocal;
 ----------------------- declarations -------------------------------------
 -- signal declarations 
   signal clk_port   : std_logic := '0';
   signal load_port  : std_logic := '0';
   signal reset_port : std_logic := '0';
   signal value      : std_logic_vector(23 downto 0); 
-  signal reciprocal : std_logic_vector(23 downto 0); 
+  signal divisor    : std_logic_vector(23 downto 0); 
   signal set_port   : std_logic := '0';
 
 -- constant declarations
   constant clk_period : time := 10 ns; 
 begin 
 
-uut: reciprocal_24b 
+uut: reciprocal 
   port map(
     clk_port   => clk_port, 
     load_port  => load_port,
     reset_port => reset_port,
     value      => value,
-    reciprocal => reciprocal,
+    reciprocal => divisor,
     set_port   => set_port);
 
 clock_proc: process 
