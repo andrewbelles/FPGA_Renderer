@@ -39,7 +39,7 @@ entity framebuffer is
           done_drawing        :   out std_logic;
           VGA_HS              :   out std_logic;
           VGA_VS              :   out std_logic;
-          VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 8 bit for an 8 bit color
+          VGA_out             :   out std_logic_vector(11 downto 0) -- framebuffer data, 4 bit for an 4 bit color
            );
 end framebuffer;
 
@@ -216,13 +216,13 @@ begin
     unsigned(pixel_y_delayed(39 downto 30)) >= 112 and unsigned(pixel_y_delayed(39 downto 30)) < 368) then
         if(front_buff = '0') then -- if writing to buffer 1, read from buffer 0
             if(buff0_output_reg(1) = '1') then
-                VGA_out_sg <= (others => '1');
+                VGA_out_sg <= "001011001011"; -- holograph blue
             else 
                 VGA_out_sg <= (others => '0');
             end if;
         elsif(front_buff = '1') then -- if writing to buffer 0, read from buffer 1
             if(buff1_output_reg(1) = '1') then
-                VGA_out_sg <= (others => '1');
+                VGA_out_sg <= "001011001011";
             else 
                 VGA_out_sg <= (others => '0');
             end if;

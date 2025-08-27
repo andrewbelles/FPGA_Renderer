@@ -114,10 +114,10 @@ signal new_points_sg : array_4x3x24_t := (others => (others => (others => '0')))
 signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0'); 
 signal request_sg, lut_valid, lut_invalid, reset_press_sg : std_logic := '0';
 signal current_points : array_4x3x24_t := (
-    0 => (0 => x"00C000", 1 => x"00C000", 2 => x"FF4000"),
-    1 => (0 => x"000000", 1 => x"FF4000", 2 => x"FF4000"),
-    2 => (0 => x"FF4000", 1 => x"00C000", 2 => x"FF4000"),
-    3 => (0 => x"000000", 1 => x"000000", 2 => x"00C000")
+    0 => (0 => x"01A000", 1 => x"01A000", 2 => x"FE6000"),
+    1 => (0 => x"01A000", 1 => x"FE6000", 2 => x"01A000"),
+    2 => (0 => x"FE6000", 1 => x"01A000", 2 => x"01A000"),
+    3 => (0 => x"FE6000", 1 => x"FE6000", 2 => x"FE6000")
 );
 
 -- FSM
@@ -279,10 +279,10 @@ point_proc : process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
         if(init_control = '1') then
-            current_points(0)(0 to 2) <= (x"00C000", x"00C000", x"FF4000");
-            current_points(1)(0 to 2) <= (x"00C000", x"FF4000", x"00C000");
-            current_points(2)(0 to 2) <= (x"FF4000", x"00C000", x"00C000");
-            current_points(3)(0 to 2) <= (x"FF4000", x"FF4000", x"FF4000"); 
+            current_points(0)(0 to 2) <= (x"01A000", x"01A000", x"FE6000");
+            current_points(1)(0 to 2) <= (x"01A000", x"FE6000", x"01A000");
+            current_points(2)(0 to 2) <= (x"FE6000", x"01A000", x"01A000");
+            current_points(3)(0 to 2) <= (x"FE6000", x"FE6000", x"FE6000"); 
         -- update current_points when done with math
         elsif(set_port_sg = '1') then
             current_points <= new_points_sg;
