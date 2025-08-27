@@ -27,11 +27,13 @@ end component;
   signal reset_port : std_logic := '0'; 
   signal angle      : std_logic_vector(15 downto 0) := (others => '0');
   signal dir        : std_logic_vector(1 downto 0)  := (others => '0');
-  signal x, y, z    : std_logic_vector(23 downto 0) := (others => '0');
   signal nx, ny, nz : std_logic_vector(23 downto 0) := (others => '0');
   signal set_port   : std_logic := '0';
 -- constants 
   constant clk_period : time := 10 ns; 
+  constant x          : std_logic_vector(23 downto 0) := x"01A000";
+  constant y          : std_logic_vector(23 downto 0) := x"01A000";
+  constant z          : std_logic_vector(23 downto 0) := x"FE6000";
 
 begin 
 
@@ -59,20 +61,20 @@ end process clock_proc;
 stim_proc: process 
 begin 
   -- x,y,z will remain constant the entire tb 
-  x <= x"064000"; -- 50.0
-  y <= x"064000"; -- 70.0
-  z <= x"064000"; -- 40.0 
-
   -- 30 degree rotation about x 
-  angle <= x"0861"; 
-  dir   <= "00"; 
+  -- Expect ~ 0x023844, 0xff67bc
+  en_port <= '1';  
+  angle   <= x"0861"; 
+  dir     <= "00"; 
   wait for 8*clk_period;
 
   reset_port <= '1';
+  en_port    <= '0'; 
   wait for 2*clk_period; 
   reset_port <= '0';
-  en_port <= '1'; 
+  en_port    <= '1'; 
   -- (-30) degree rotation about x 
+  -- Expect ~ 0x009844, 0xfdc7bc
   angle <= x"5c27"; 
   dir   <= "00"; 
   wait for 8*clk_period;
@@ -83,6 +85,7 @@ begin
   reset_port <= '0';
   en_port <= '1'; 
   -- 45 degree rotation about y
+  -- Expect ~ 0x0, 0xfdb3b0
   angle <= x"0c91"; 
   dir   <= "01"; 
   wait for 8*clk_period;
@@ -92,10 +95,10 @@ begin
   wait for 2*clk_period; 
   reset_port <= '0';
   en_port <= '1'; 
-    -- (-45) degree rotation about y
-  angle <= x"57f7"; 
-  dir   <= "01"; 
-  --wait for 5*clk_period;
+  -- 15 degree rotation about z
+  -- Expect 0x012628, 0x01fd7e
+  angle <= x"0430"; 
+  dir   <= "10"; 
   wait; 
 end process stim_proc; 
 
