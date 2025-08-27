@@ -44,11 +44,15 @@ end component reciprocal_24b;
   signal Wc_reciprocal  : signed(23 downto 0) := (others => '0');
   signal xndc, yndc     : signed(23 downto 0) := (others => '0'); 
   signal Xc, Yc         : signed(23 downto 0) := (others => '0');
-
-  constant m00          : signed(23 downto 0) := x"001000";
-  constant m11          : signed(23 downto 0) := x"001000";
+  
+  -- x"0016DA" 70 deg
+  -- x"002699" 45 deg 
+  -- x"001BB6" 60 deg 
+  -- x"001000" 90 deg
+  constant m00          : signed(23 downto 0) := x"0016DA";
+  constant m11          : signed(23 downto 0) := x"0016DA";
   constant b            : signed(23 downto 0) := x"000080";
-  constant near_clip    : signed(23 downto 0) := x"002000";
+  constant near_clip    : signed(23 downto 0) := x"008000";
 begin 
 --------------------------------------------------------------------------
 -- Get perspective from 1/z   
