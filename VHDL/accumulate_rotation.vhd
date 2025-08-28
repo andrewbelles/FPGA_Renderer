@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity rotation_mul_24b is 
+entity accumulate_rotation is 
 port( 
   clk_port   : in std_logic; 
   load_en    : in std_logic; 
@@ -13,9 +13,9 @@ port(
   products   : in array_4x24_t;  
   nx, ny, nz : out std_logic_vector(23 downto 0);
   set_port   : out std_logic); 
-end rotation_mul_24b;
+end accumulate_rotation;
 
-architecture behavioral of rotation_mul_24b is 
+architecture behavioral of accumulate_rotation is 
   type signed_4x24_t is array (0 to 3) of signed(23 downto 0); 
   type direction_type is ( xaxis, yaxis, zaxis, none ); 
 

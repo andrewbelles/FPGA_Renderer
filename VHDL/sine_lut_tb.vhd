@@ -6,27 +6,31 @@ entity sine_lut_tb is
   end sine_lut_tb; 
 
 architecture testbench of sine_lut_tb is 
-  component sine_lut is 
-    port( 
-      clk_port   : in std_logic;
-      cos_en     : in std_logic; 
-      rads       : in std_logic_vector(15 downto 0);
-      sine_out   : out std_logic_vector(15 downto 0));
-  end component; 
+component sine_lut is 
+  port( 
+    clk_port   : in std_logic;
+    cos_en     : in std_logic; 
+    rads       : in std_logic_vector(15 downto 0);
+    sine       : out std_logic_vector(15 downto 0);
+    set_port   : out std_logic);
+end component; 
 
-signal clk_port : std_logic := '0'; 
-signal rads     : std_logic_vector(15 downto 0) := (others => '0');
-signal sine_out : std_logic_vector(15 downto 0) := (others => '0');
+  signal clk_port : std_logic := '0'; 
+  signal cos_en   : std_logic := '0'; 
+  signal rads     : std_logic_vector(15 downto 0) := (others => '0');
+  signal sine     : std_logic_vector(15 downto 0) := (others => '0');
+  signal set_port : std_logic := '0'; 
 
-constant clk_period : time := 10 ns; 
+  constant clk_period : time := 10 ns; 
 
 begin 
 uut: sine_lut 
 port map(
   clk_port => clk_port, 
-  cos_en => cos_en, 
-  rads => rads, 
-  sine_out => sine_out);
+  cos_en   => cos_en, 
+  rads     => rads, 
+  sine     => sine,
+  set_port => set_port);
 
 clock_stim: process
 begin
@@ -61,7 +65,9 @@ begin
   rads <= x"e6de";
   wait for 2*clk_period; 
 
+  -- Swapping to reading cosine values, 
   -- pi/6
+  cos_en <= '1';
   rads <= x"10c1";
   wait for 2*clk_period; 
 

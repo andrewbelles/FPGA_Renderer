@@ -67,7 +67,7 @@ begin
   reset_port <= '0';
   angle      <= (x"0861", x"0430");
   dir        <= ("01", "00");
-  wait for 250*clk_period; 
+  wait for 35*clk_period; 
 
   -- Z -30 deg, Y 60 deg 
   reset_port <= '1';
@@ -77,7 +77,7 @@ begin
   reset_port <= '0';
   angle      <= (x"F79F", x"10C1");
   dir        <= ("10", "01");
-  wait for 250*clk_period; 
+  wait for 35*clk_period; 
 
   -- X 10 deg, Y -60 deg  
   reset_port <= '1';
@@ -87,7 +87,7 @@ begin
   reset_port <= '0';
   angle      <= (x"02CB", x"EF3F");
   dir        <= ("00", "01");
-  wait for 250*clk_period; 
+  wait for 35*clk_period; 
 
   -- Z 90 deg, X -45 deg  
   reset_port <= '1';
@@ -97,7 +97,7 @@ begin
   reset_port <= '0';
   angle      <= (x"1922", x"F36F");
   dir        <= ("10", "00");
-  wait for 250*clk_period; 
+  wait for 35*clk_period; 
 
   -- Y 20 deg, Z 10 deg  
   reset_port <= '1';
