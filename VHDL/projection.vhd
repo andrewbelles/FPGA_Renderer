@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity projection_24b is 
+entity project_point is 
 port( 
   clk_port     : in std_logic;
   load_port    : in std_logic; 
@@ -11,11 +11,11 @@ port(
   x, y, z      : in std_logic_vector(23 downto 0); 
   point_packet : out std_logic_vector(15 downto 0); -- (8 high x),(8 low y)
   set_port     : out std_logic);
-end projection_24b; 
+end project_point; 
 
-architecture behavioral of projection_24b is 
+architecture behavioral of project_point is 
 ----------------------- component declarations ---------------------------
-component reciprocal_24b 
+component reciprocal 
   port (
     clk_port   : in std_logic; 
     load_port  : in std_logic;
@@ -23,7 +23,7 @@ component reciprocal_24b
     value      : in std_logic_vector(23 downto 0);  -- q11.12 value to mul invert    
     reciprocal : out std_logic_vector(23 downto 0); -- q11.12 reciprocal 
     set_port   : out std_logic); 
-end component reciprocal_24b; 
+end component reciprocal; 
 
   type state_type is ( idle, load, wait_reciprocal, load_reciprocal, dividing, shift, done);
   signal current_state, next_state : state_type := idle; 
@@ -60,7 +60,7 @@ begin
 inv_z <= std_logic_vector(near_clip) when abs(inv_z_raw) < near_clip else 
          std_logic_vector(inv_z_raw);  
 
-get_reciprocal: reciprocal_24b 
+get_reciprocal: reciprocal 
   port map( 
     clk_port   => clk_port, 
     load_port  => reciprocal_en,

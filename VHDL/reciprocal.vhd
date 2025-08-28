@@ -3,7 +3,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 use work.array_types.all; 
 
-entity reciprocal_24b is 
+entity reciprocal is 
   port (
     clk_port   : in std_logic; 
     load_port  : in std_logic;
@@ -11,9 +11,9 @@ entity reciprocal_24b is
     value      : in std_logic_vector(23 downto 0);    -- q11.12 value to mul invert    
     reciprocal : out std_logic_vector(23 downto 0);   -- q11.12
     set_port   : out std_logic); 
-end entity reciprocal_24b;
+end entity reciprocal;
 
-architecture behavioral of reciprocal_24b is 
+architecture behavioral of reciprocal is 
 ----------------------- components ---------------------------------------
 component newton_lut  -- gets seed for newtons method 
   port (
@@ -24,7 +24,7 @@ component newton_lut  -- gets seed for newtons method
     set_port   : out std_logic);  
 end component newton_lut; 
 
-component newton_24b  -- interface that executes 2 step newtons-rhapson   
+component newtons_method  -- interface that executes 2 step newtons-rhapson   
   port (
     clk_port   : in std_logic; 
     load_port  : in std_logic; 
@@ -33,7 +33,7 @@ component newton_24b  -- interface that executes 2 step newtons-rhapson
     seed       : in std_logic_vector(23 downto 0);   -- q6.17
     root       : out std_logic_vector(23 downto 0);  -- q6.17
     set_port   : out std_logic); 
-end component newton_24b;
+end component newtons_method;
 ----------------------- declarations -------------------------------------
 -- state declarations 
   type state_type is ( idle, load, normalize, seed, newtons, done );   
@@ -48,10 +48,11 @@ end component newton_24b;
   signal newton_en     : std_logic := '0';
   signal set_en        : std_logic := '0';
 
--- set_port signal from newton_24b 
+-- set_port signal from newtons_method 
   signal newton_set    : std_logic := '0';
 
 -- constant addr,seed pair being fetched. only right once state > seed  
+  signal lut_set       : std_logic := '0';
   signal addr          : std_logic_vector(9 downto 0)  := (others => '0');
   signal fetched_seed  : std_logic_vector(23 downto 0) := (others => '0');
 
@@ -64,7 +65,6 @@ end component newton_24b;
 -- signals for newtons method 
   signal mantissa      : std_logic_vector(23 downto 0) := (others => '0');
   signal newton_seed   : std_logic_vector(23 downto 0) := (others => '0');
-  signal bufr_seed     : std_logic_vector(23 downto 0) := (others => '0');
   signal root          : std_logic_vector(23 downto 0) := (others => '0');
 
 -- ensure numeric stability
@@ -150,16 +150,16 @@ read_seed: newton_lut
     reset_port => reset_port, 
     addr       => addr, 
     seed       => fetched_seed, 
-    set_port   => OPEN);
+    set_port   => lut_set);
 
 -- constantly address, will only be correct once 
 addr <= std_logic_vector(norm(21 downto 12));
-newton_seed <= fetched_seed;
+newton_seed <= fetched_seed when lut_set= '1' else (others => '0');
 
 --------------------------------------------------------------------------
 -- Newton's Method 
 --------------------------------------------------------------------------
-get_reciprocal: newton_24b
+get_reciprocal: newtons_method
  port map(
     clk_port   => clk_port,
     load_port  => newton_en,
@@ -167,8 +167,7 @@ get_reciprocal: newton_24b
     mantissa   => mantissa,
     seed       => newton_seed,
     root       => root,
-    set_port   => newton_set
-);
+    set_port   => newton_set);
 
 mantissa <= std_logic_vector(norm);
 

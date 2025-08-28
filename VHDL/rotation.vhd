@@ -26,16 +26,16 @@ component sine_lut
     set_port : out std_logic); 
 end component sine_lut;
 
-component set_operands_m24x24 is 
+component set_operands_rot is 
   port (
     clk_port : in std_logic;
     dir      : in std_logic_vector(1 downto 0);
     x,y,z    : in std_logic_vector(23 downto 0);
     operands : out array_3x24_t; 
     set_port : out std_logic);
-end component set_operands_m24x24;
+end component set_operands_rot;
 
-component rotation_mul_24b is 
+component accumulate_rotation is 
   port (
     clk_port   : in std_logic; 
     load_en    : in std_logic; 
@@ -45,7 +45,7 @@ component rotation_mul_24b is
     products   : in array_4x24_t; 
     nx, ny, nz : out std_logic_vector(23 downto 0);
     set_port   : out std_logic); 
-end component rotation_mul_24b; 
+end component accumulate_rotation; 
 
 ----------------------- local declarations -------------------------------
 -- signals
@@ -84,7 +84,7 @@ get_cos: sine_lut
     sine     => cos16,
     set_port => cosine_set); 
 
-get_operands: set_operands_m24x24
+get_operands: set_operands_rot
   port map(
     clk_port => clk_port, 
     dir      => dir, 
@@ -179,7 +179,7 @@ begin
   end loop; 
 end process; 
 
-update_point: rotation_mul_24b 
+update_point: accumulate_rotation 
   port map(
     clk_port   => clk_port,
     reset_port => reset_port, 
