@@ -1,3 +1,9 @@
+-- Ben Sheppard, with help of ChatGPT for writing the test inputs to the graphics_manager
+-- Tests the graphics manager by loading two different tetrahedrons and alternating between them at a rate of 0.5 times per second
+
+
+
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -46,7 +52,6 @@ end component;
   constant TICKS_PER_FRAME : natural := 12500000;
 
   -- Two frames, each with 4 vertices (X high byte, Y low byte).
-  -- These example sets are taken from values that have worked in your notes.
   type frames_t is array(natural range <>) of array_4x16_t;
   constant FRAMES : frames_t(0 to 1) := (
     0 => (x"A948", x"5648", x"80B7", x"8080"),  -- Frame A
@@ -82,6 +87,7 @@ begin
 clock : system_clock_generation
 Port Map(input_clk_port => clk_ext_port,
          system_clk_port => clk);
+         
   -- Frame alternator and one-clock pulse generator
   process(clk)
   begin
