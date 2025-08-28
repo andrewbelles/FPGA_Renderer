@@ -1,14 +1,7 @@
 ----------------------------------------------------------------------------------
--- Company: Dartmouth Engineering
--- Engineer: Ben Sheppard and Andy Belles
--- 
--- Create Date: 08/15/2025 11:24:55 AM
--- Module Name: bresenham - Behavioral
--- Project Name: 
--- Tool Versions: 
--- Description: 
--- 
--- 
+-- From Prof. Stephen A. Edwards's lecture "Drawing Lines with SystemVerilog", Columbia University, Spring 2015 
+-- Converted to VHDL by Ben Sheppard, only modifications were to bus widths for our project
+-- Outputs pixel on rising edge at (x,y) that should be drawn to connect (x0,y0) to (x1,y2)
 
 ----------------------------------------------------------------------------------
 
@@ -115,16 +108,6 @@ end process;
 
 x <= std_logic_vector(x_sg(7 downto 0));
 y <= std_logic_vector(y_sg(7 downto 0));
-
-
-
--- state update
---state_update : process(clk) 
---begin
---    if(rising_edge(clk)) then
---        current_state <= next_state;
---    end if;
---end process state_update;
 
 
 end Behavioral;

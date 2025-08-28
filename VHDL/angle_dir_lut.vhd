@@ -1,5 +1,4 @@
 ----------------------------------------------------------------------------------
--- Angle dir LUT
 -- Ben Sheppard and Andy Belles
 
 -- Takes in an address (data for key pressed on keyboard) and returns the corresponding angle and direction for the rotation.

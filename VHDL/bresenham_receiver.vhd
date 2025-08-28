@@ -1,21 +1,8 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 08/18/2025 01:54:53 PM
--- Design Name: 
--- Module Name: bresenham_receiver - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Ben Sheppard
+-- Receives 4 new vertices and draws 6 lines between them, 1 pixel thick. 
+-- Each pixel is sent on a clock edge, and they are valid when load_mem is high.
+-- After completion, tet_drawn is asserted
 ----------------------------------------------------------------------------------
 
 
@@ -58,8 +45,6 @@ signal flip_buffer : std_logic := '0'; -- signal from FSM to flip buffer
 -- bresenham signals
 signal reset_bres, plot_bres, start_bres, done_bres :  std_logic := '0';
 signal x0_bres, y0_bres, x1_bres, y1_bres, x_bres, y_bres         : std_logic_vector(7 downto 0) := (others => '0');
-signal vertices_reg : array_4x16_t;
-
 
 type state is (IDLE, CB, ACTIVATE, COMPUTE, INC, DONE);
 signal current_state, next_state : state := IDLE;
@@ -155,32 +140,32 @@ begin
 bres_input : process(current_state, counter)
 begin
     case counter is
-        when "000" =>  -- line 0: point0 -> point1
+        when "000" =>  -- line 0: point0 to point1
             x0_bres <= x_points(0);
             y0_bres <= y_points(0);
             x1_bres <= x_points(1);
             y1_bres <= y_points(1);
-        when "001" =>  -- line 1: point0 -> point2
+        when "001" =>  -- line 1: point0 to point2
             x0_bres <= x_points(0);
             y0_bres <= y_points(0);
             x1_bres <= x_points(2);
             y1_bres <= y_points(2);
-        when "010" =>  -- line 2: point0 -> point3
+        when "010" =>  -- line 2: point0 ti point3
             x0_bres <= x_points(0);
             y0_bres <= y_points(0);
             x1_bres <= x_points(3);
             y1_bres <= y_points(3);
-        when "011" =>  -- line 3: point1 -> point2
+        when "011" =>  -- line 3: point1 to point2
             x0_bres <= x_points(1);
             y0_bres <= y_points(1);
             x1_bres <= x_points(2);
             y1_bres <= y_points(2);
-        when "100" =>  -- line 4: point1 -> point3
+        when "100" =>  -- line 4: point1 topoint3
             x0_bres <= x_points(1);
             y0_bres <= y_points(1);
             x1_bres <= x_points(3);
             y1_bres <= y_points(3);
-        when "101" =>  -- line 5: point2 -> point3
+        when "101" =>  -- line 5: point2 to point3
             x0_bres <= x_points(2);
             y0_bres <= y_points(2);
             x1_bres <= x_points(3);

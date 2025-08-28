@@ -1,21 +1,9 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 08/22/2025 12:29:24 PM
--- Design Name: 
--- Module Name: top_level_controller - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Ben Sheppard
+--Top-level controller for the FPGA rotating tetrahedron project. Coordinates the user input,
+-- math, and graphics modules of the project.
+-- Runs all systems on 25 MHz clock from clock divider used in class
+
 ----------------------------------------------------------------------------------
 
 
@@ -58,7 +46,7 @@ end component;
 component graphics_manager is
     Port (
        sys_clk	           : in  std_logic;	-- mapped to external IO device (100 MHz Clock)
-       points              : in array_4x16_t;
+       packets              : in array_4x16_t;
        draw_new_points     : in std_logic;
        ready_to_draw       : out std_logic;
        done_drawing        : out std_logic;
@@ -92,7 +80,7 @@ component angle_dir_lut is
   lut_valid     : out std_logic;
   lut_invalid : out std_logic);
 end component;
--- signals 
+
 signal sys_clk : std_logic := '0';
 signal data : std_logic_vector(7 downto 0) := (others => '0');
 -- graphics
@@ -100,15 +88,18 @@ signal data_valid, HS_sig, VS_sig : std_logic := '0';
 signal red_sg, green_sg, blue_sg  : std_logic_vector(3 downto 0) := (others => '0');
 signal draw_new_points_sg : std_logic := '0';
 
--- math signals
+-- math 
 signal load_port_sg, set_port_sg : std_logic := '0';
 signal reset_port_sg : std_logic := '1';
 signal angle_sg : array_2x16_t := (others => (others => '0'));
 signal dir_sg : array_2x2_t := (others => (others => '0'));
 signal points_sg : array_4x3x24_t  := (others => (others => (others => '0'))); 
-signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0'));                 -- currently sending these to graphics
+signal packets_sg, packets_reg : array_4x16_t := (others => (others => '0'));
 signal ready_to_draw_sg, done_drawing_sg : std_logic := '0';
 signal new_points_sg : array_4x3x24_t := (others => (others => (others => '0')));
+signal wait_en, wait_tc : std_logic := '0';
+signal math_wait_counter : unsigned(4 downto 0) := (others => '0');
+signal map_press_control, init_control : std_logic := '0';
 
 -- lut
 signal addr_reg       : std_logic_vector(7 downto 0) := (others => '0'); 
@@ -123,10 +114,6 @@ signal current_points : array_4x3x24_t := (
 -- FSM
 type state is (INIT, IDLE, MAP_PRESS, WAIT_MATH, MATH, WAIT_SCREEN, START_DRAW, DRAW);
 signal next_state, current_state : state := INIT;
-signal map_press_control, init_control : std_logic := '0';
-
-signal wait_en, wait_tc : std_logic := '0';
-signal math_wait_counter : unsigned(4 downto 0) := (others => '0');
 
 begin
 clock : system_clock_generation
@@ -140,7 +127,7 @@ rec : uart_receiver
 
 graphics_man : graphics_manager
     Port Map(sys_clk => sys_clk,
-         points      => packets_reg,
+         packets      => packets_reg,
          draw_new_points  => draw_new_points_sg, 
          ready_to_draw => ready_to_draw_sg,
          done_drawing  => done_drawing_sg,
@@ -171,8 +158,8 @@ angle_dir: angle_dir_lut
              lut_valid => lut_valid,
              lut_invalid => lut_invalid);
              
--- store packet in register to ensure it gets loaded properly  
-process(sys_clk)
+-- store packet in register to ensure it gets loaded properly and lasts entire draw cycle
+storepacket: process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
         if(set_port_sg = '1') then
@@ -180,17 +167,11 @@ begin
         end if;
     end if;
 end process;
----------------------------------------------------------------------------------------------------------------------------------------------------------------    
--- FSM controller
-state_update : process(sys_clk) 
-begin
-    if(rising_edge(sys_clk)) then
-        current_state <= next_state;
-    end if;
-end process;
 
-wait_tc <= '1' when math_wait_counter = 20 else '0';
-process(sys_clk)
+-- waits 20 cycles with reset_port (input to math) low before asserting load_port and going into math. 
+-- do this because it lets the cycles propagate out of math, and we have plenty of time. 20 cycles is overkill, but it can't hurt
+wait_tc <= '1' when math_wait_counter = 19 else '0';
+waitformath: process(sys_clk)
 begin
     if(rising_edge(sys_clk)) then
         if(wait_en = '1') then
@@ -200,6 +181,47 @@ begin
                 math_wait_counter <= math_wait_counter + 1;
             end if;
         end if;
+    end if;
+end process;
+
+-- assigns current_points, the register that holds the current 3D points
+currpoints : process(sys_clk)
+begin
+    if(rising_edge(sys_clk)) then
+        if(init_control = '1') then
+            -- default points for init or after clicking reset key
+            current_points(0)(0 to 2) <= (x"01A000", x"01A000", x"FE6000");
+            current_points(1)(0 to 2) <= (x"01A000", x"FE6000", x"01A000");
+            current_points(2)(0 to 2) <= (x"FE6000", x"01A000", x"01A000");
+            current_points(3)(0 to 2) <= (x"FE6000", x"FE6000", x"FE6000"); 
+        elsif(set_port_sg = '1') then
+            current_points <= new_points_sg; -- current points are updated wtih result from math when math is done
+        end if;
+    end if;
+end process;
+
+-- assigns address for accessing angle_dir_LUT           
+address : process(sys_clk)
+begin
+    if(rising_edge(sys_clk)) then
+        -- default
+        request_sg <= '0';
+        if(init_control = '1') then
+            addr_reg <= (others => '0'); -- set address to 0 if initializing to map to idx 13
+            request_sg <= '1';
+        elsif(map_press_control = '1') then
+            addr_reg <= data; -- set address to data if in map press state
+            request_sg <= '1'; -- send request
+        end if;
+    end if;
+end process;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------    
+-- FSM controller
+state_update : process(sys_clk) 
+begin
+    if(rising_edge(sys_clk)) then
+        current_state <= next_state;
     end if;
 end process;
 
@@ -241,7 +263,7 @@ begin
             next_state <= DRAW;
         when DRAW =>
             if(done_drawing_sg = '1') then
-                next_state <= IDLE;
+                next_state <= IDLE; -- back to idle for new cycles
             end if;
         when others =>
             next_state <= IDLE;
@@ -259,52 +281,23 @@ begin
     wait_en <= '0';
     case current_state is
         when INIT =>
-            init_control <= '1';
+            init_control <= '1'; -- goes to clocked process
         when MAP_PRESS =>
-            map_press_control <= '1';
+            map_press_control <= '1'; -- goes to clocked process
         when WAIT_MATH =>
-            reset_port_sg <= '0';
+            reset_port_sg <= '0'; -- need to have reset low for a little before loading math
             wait_en <= '1';
         when MATH =>
-            load_port_sg <= '1';
-            reset_port_sg <= '0';
+            load_port_sg <= '1'; -- load points
+            reset_port_sg <= '0'; -- need reset low in math
         when START_DRAW =>
-            draw_new_points_sg <= '1';
+            draw_new_points_sg <= '1'; -- kick off graphics manager
         when others =>
             null;
     end case;
 end process;
 
-point_proc : process(sys_clk)
-begin
-    if(rising_edge(sys_clk)) then
-        if(init_control = '1') then
-            current_points(0)(0 to 2) <= (x"01A000", x"01A000", x"FE6000");
-            current_points(1)(0 to 2) <= (x"01A000", x"FE6000", x"01A000");
-            current_points(2)(0 to 2) <= (x"FE6000", x"01A000", x"01A000");
-            current_points(3)(0 to 2) <= (x"FE6000", x"FE6000", x"FE6000"); 
-        -- update current_points when done with math
-        elsif(set_port_sg = '1') then
-            current_points <= new_points_sg;
-        end if;
-    end if;
-end process;
-           
-address : process(sys_clk)
-begin
-    if(rising_edge(sys_clk)) then
-        -- default
-        request_sg <= '0';
-        if(init_control = '1') then
-            addr_reg <= (others => '0'); -- set address to 0 if initializing to map to idx 13
-            request_sg <= '1';
-        elsif(map_press_control = '1') then
-            addr_reg <= data; -- set address to data if in map press state
-            request_sg <= '1'; -- send request
-        end if;
-    end if;
-end process;
-
+-- assign outputs
 red <= red_sg;
 green <= green_sg;
 blue <= blue_sg;

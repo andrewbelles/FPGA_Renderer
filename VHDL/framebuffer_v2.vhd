@@ -1,21 +1,7 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 08/18/2025 12:24:52 PM
--- Design Name: 
--- Module Name: framebuffer_manager - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Ben Sheppard
+-- Instantiates two BRAMs for dual buffering. Contains controller to clear back buffer and then write 1s to it in positions that should be illuminated (from bresenham algorithm)
+-- Swaps buffers after writing to back ram so that VGA output is updated to new tetrahedron.
 ----------------------------------------------------------------------------------
 
 
@@ -31,7 +17,7 @@ entity framebuffer is
           write_en            :   in std_logic;
           pixel_x, pixel_y    :   in std_logic_vector(9 downto 0); -- address to read
           video_on            :   in std_logic;
-          -- note takes in HS and VS unlike the VGA setup because need to slow them down by 1 clock cycle due to reading BRAM
+          -- note takes in HS and VS unlike the VGA calibratoin setup because need to slow them down  due to reading BRAM
           HS_in               :   in std_logic;
           VS_in               :   in std_logic;
           ready_to_draw      :   out std_logic;
@@ -90,7 +76,6 @@ signal HS_delayed       : std_logic_vector(3 downto 0);
 signal VS_delayed       : std_logic_vector(3 downto 0);
 signal buff0_output_reg : std_logic_vector(1 downto 0);
 signal buff1_output_reg : std_logic_vector(1 downto 0);
-
 signal pixel_x_delayed : std_logic_vector(39 downto 0);
 signal pixel_y_delayed : std_logic_vector(39 downto 0);
 
@@ -103,10 +88,21 @@ signal blanking : std_logic; -- from logic to fsm to say that we are in a blanki
 
 signal clearing : std_logic; -- from fsm to clearing logic says to start clearing memory
 signal receiving : std_logic; -- -- from fsm to logic to say that we are receiving and writing to memory
-signal am_waiting   : std_logic; -- from fsm to logic to say that we are waiting for blanking region
 signal go_swap         : std_logic; -- from fsm to logic to say to swap which one is drawing to vga
 
+-- simulation signals
+signal video_on_sg, HS_sg, VS_sg, buff0_sg, buff1_sg : std_logic;
+signal pixelx_sg, pixely_sg : std_logic_vector(9 downto 0);
 begin
+
+-- simulation signal assignments
+video_on_sg <= video_on_delayed(3);
+HS_sg <= HS_delayed(3);
+VS_sg <= VS_delayed(3);
+buff0_sg <= buff0_output_reg(1);
+buff1_sg <= buff1_output_reg(1);
+pixelx_sg <= pixel_x_delayed(39 downto 30);
+pixely_sg <= pixel_y_delayed(39 downto 30);
 
 -- INSTANTIATE BRAM
 buff0 : blk_mem_gen_0
@@ -130,19 +126,17 @@ buff0 : blk_mem_gen_0
   );
   
 ------------------------------------------------------------------------------------------------------------------------------------
--- LOGIC
 
--- slows down video on, VS, and HS by 4 sclock cycles 
--- slows down buffer output by 2 clock cycles (note, needed output register due to sub-clock cycle latency issue)
--- slows down pixel_x and pixel_y by 4 sclock (1 VGA pixel) for determining addr early enough in raddr process
+
+-- pipelines graphics siganls so that they account for 2 cycle read latency from BRAM and the fact that BRAM outputs are registered for stability
 pipeline : process(clk)
 begin
     if(rising_edge(clk)) then
-        --delay video_on, HS, VS by 4 cycles
+        --delay video_on, HS, and VS by 4 cycles
         video_on_delayed(0) <= video_on; -- cycle t
         video_on_delayed(1) <= video_on_delayed(0); -- cycle t+1
-        video_on_delayed(2) <= video_on_delayed(1); -- cycle t+1
-        video_on_delayed(3) <= video_on_delayed(2); -- cycle t+1
+        video_on_delayed(2) <= video_on_delayed(1); -- cycle t+2
+        video_on_delayed(3) <= video_on_delayed(2); -- cycle t+3
 
         HS_delayed(0) <= HS_in;
         HS_delayed(1) <= HS_delayed(0);
@@ -205,7 +199,6 @@ clear_tc <= '1' when clear_addr = 65535 else '0';
 
 -- process sets VGA_out_sg by setting it to all 1s or all 0s
 -- chooses correct BRAM based on front_buff
--- FOR NOW: Just doing black or white (all 0s or all 1s). May add functionality in future 
 -- 
 --Notes: Had a lot of trouble with timing, but I believe it has been fixed now that I am running this VGA output off of the delayed
 -- pixel. pixel_x_delayed is 4 system clock cycles behind pixel x, resulting in it being one 25 MHz (VGA) pixel behind. 
@@ -218,7 +211,7 @@ begin
             if(buff0_output_reg(1) = '1') then
                 VGA_out_sg <= "001011001011"; -- holograph blue
             else 
-                VGA_out_sg <= (others => '0');
+                VGA_out_sg <= (others => '0'); -- black otherwise
             end if;
         elsif(front_buff = '1') then -- if writing to buffer 0, read from buffer 1
             if(buff1_output_reg(1) = '1') then
@@ -234,24 +227,26 @@ end process;
 
 -- computes write address 
 -- address is y*256+x which can be done by shifting y left 8 times, then OR with x
-
-write_addr <= std_logic_vector(
-           (unsigned(write_y) & unsigned(write_x))
-        );
+waddr: process(write_x, write_y)
+begin
+    write_addr <= std_logic_vector(
+               (unsigned(write_y) & unsigned(write_x))
+            );
+end process;
         
 -- process to find address to read by shifting the pixel_x and pixel_y so that they only activate when in the
 -- 256x256 window in the center of the screen
 raddr: process(pixel_x, pixel_y)
 begin
     -- in center 256x256 window of screen
-    if (unsigned(pixel_x) >= 192 and unsigned(pixel_x) < 448 and -- start reading 1 25MHz cycle early
+    if (unsigned(pixel_x) >= 192 and unsigned(pixel_x) < 448 and
         unsigned(pixel_y) >= 112 and unsigned(pixel_y) < 368) then
         -- offsets the read_x and read_y so that (192,112) is (0,0) address in the buffer.
         -- must then resize result to be 8 bit to match size of read_addr
         -- finally, as with write address, shifts y left by 8 (*256), then adds x
         read_addr <= std_logic_vector(
                 resize(unsigned(pixel_y) - to_unsigned(112,10),8) & 
-                resize(unsigned(pixel_x) - to_unsigned(192,10),8) -- +1 makes it read the 192 address at 191, will be pipelined into the ram
+                resize(unsigned(pixel_x) - to_unsigned(192,10),8)
             ); 
     else
         read_addr <= (others => '0'); -- if not in center of screen, read_address is 0 (not using)
@@ -313,7 +308,7 @@ write_data(0) <= '0' when clearing = '1' else '1';
 
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- FSM for writing to back buffer
+-- FSM 
 state_update : process(clk) 
 begin
     if(rising_edge(clk)) then
@@ -357,7 +352,6 @@ begin
     clearing <= '0';
     clear_fulfilled <= '0';
     receiving <= '0';
-    am_waiting <= '0';
     go_swap <= '0';
     done_drawing <= '0';
     ready_to_draw <= '0'; -- added to not infer latch
@@ -368,11 +362,8 @@ begin
             clearing <= '1'; -- to clearing logic (local)
         when CLEARED =>
             clear_fulfilled <= '1'; -- to bresenham_receiver
-            clear_fulfilled <= '1'; -- to bresenham_receiver
         when RECEIVE =>
             receiving <= '1';
-        when WAITING =>
-            am_waiting <= '1';
         when SWAP =>
             go_swap <= '1';
         when DONE => 

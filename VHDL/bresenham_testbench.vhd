@@ -39,16 +39,16 @@ architecture Behavioral of bresenham_testbench is
     component bresenham is
         Port (clk, reset        :   in std_logic;
               start             :   in std_logic;
-              x0, y0, x1, y1    :   in std_logic_vector(10 downto 0);
+              x0, y0, x1, y1    :   in std_logic_vector(7 downto 0);
               plot              :   out std_logic;    
-              x, y              :   out std_logic_vector(10 downto 0);
+              x, y              :   out std_logic_vector(7 downto 0);
               done              :   out std_logic
              );    
     end component;
     
-    constant PERIOD : time := 10 ns;
+    constant PERIOD : time := 40 ns;
     signal clk, reset, start, plot, done      : std_logic;
-    signal x0, y0, x1, y1, x, y               : std_logic_vector(10 downto 0);
+    signal x0, y0, x1, y1, x, y               : std_logic_vector(7 downto 0);
 begin
 uut : bresenham
     Port Map(clk => clk, 
@@ -74,42 +74,28 @@ end process clk_proc;
 
 stim_proc : process
 begin
-    wait for PERIOD / 2 - 1 ns;
-    -- test from (0,0) to (4,7)
-    x0 <= x"20";
-    y0 <= x"f0";
-    x1 <= x"10";
-    y1 <= x"82"; 
+    reset <= '0';
+    wait for PERIOD / 2 - 1 ns; -- shift 
+    -- test from (0,0) to (7,4) (same as source)
+    x0 <= "00000000";
+    y0 <= "00000000";
+    x1 <= "00000111";
+    y1 <= "00000100"; 
     
-  --  start <= '1';
-   -- wait for PERIOD;
-   -- start <= '0';
-   -- wait for 8*PERIOD;
+    start <= '1';
+    wait for PERIOD;
+    start <= '0';
+    wait for 10*PERIOD;
    
-   -- x0 <= "00000000101";
-   -- y0 <= "00000000011";
-  --  x1 <= "00000000110";
-  --  y1 <= "00000000100";
-  --  start <= '1';
-  --  wait for PERIOD;
-   -- start <= '0';
-   -- wait for 8* period;
-    
-    -- testing from top left to bottom right of screen
-    --x0 <= "00000000000"; -- 0
-   -- y0 <= "00000000000"; -- 0
-   -- x1 <= "01010000000"; -- 640
-   -- y1 <= "00111100000"; -- 480
-    --start <= '1';
-  --  wait for PERIOD;
---    x0 <= "00000000";
---    y0 <= "00000000";
---    x1 <= "10000000";
---    y1 <= "10000000";
-    
---    start <= '1';
---    wait for PERIOD;
---    start <= '0';
+
+    --testing from top left to bottom right of screen
+    x0 <= "00000000"; -- 0
+    y0 <= "00000000"; -- 0
+    x1 <= "11111111"; -- 255
+    y1 <= "11111111"; -- 255
+    start <= '1';
+    wait for PERIOD;
+    start <= '0';
     wait;
 end process stim_proc;
 

@@ -50,8 +50,17 @@ component vga_test_pattern is
           row,column     : in std_logic_vector(9 downto 0);
           color          : out std_logic_vector(11 downto 0));
 end component;
+component system_clock_generation is
+    Generic( CLK_DIVIDER_RATIO : integer := 4  );
+    Port (
+        --External Clock:
+        input_clk_port		: in std_logic;
+        --System Clock:
+        system_clk_port		: out std_logic);
+end component;
 
 -- signal declarations
+signal system_clk : STD_LOGIC;
 signal video_on : STD_LOGIC;
 signal pixel_x  : STD_LOGIC_VECTOR(9 downto 0);
 signal pixel_y  : STD_LOGIC_VECTOR(9 downto 0);
@@ -60,10 +69,14 @@ signal color    : STD_LOGIC_VECTOR(11 downto 0);
 
 begin
 
+clock : system_clock_generation 
+    Port Map(
+        input_clk_port => clk_ext_port,
+        system_clk_port => system_clk);
 -- wire the controller
 controller : vga_controller 
     Port Map(
-        clk => clk_ext_port, -- uses the 100MHz FPGA clock
+        clk => system_clk, -- uses the 100MHz FPGA clock
         video_on => video_on,
         H_sync => HS, -- send HS to vga port on FPGA
         V_sync => VS, -- send VS to vga port on FPGA

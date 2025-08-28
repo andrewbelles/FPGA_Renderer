@@ -1,21 +1,6 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 08/13/2025 06:18:50 PM
--- Design Name: 
--- Module Name: vga_controller - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Ben Sheppard, with the guidance of the old ENGS31 Lab 5 sheet
+-- Provides pixel_x, pixel_y, HS, VS, and video_on signals for VGA
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -59,7 +44,7 @@ architecture behavior of vga_controller is
     -- V_sync process
    -- signal v_sync_sg     : STD_LOGIC := '1'; -- start at 1
     signal vscan_counter : unsigned(9 downto 0) := (others => '0');
-BEGIN
+    BEGIN
 
         
     -- H_sync generating process

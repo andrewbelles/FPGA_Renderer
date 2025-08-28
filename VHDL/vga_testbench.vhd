@@ -28,7 +28,7 @@ architecture testbench of VGA_tb is
 
     component vga_controller is
         port (
-            clk      : in  STD_LOGIC; --100 MHz clock
+            clk      : in  STD_LOGIC; --25 MHz clock
             V_sync   : out STD_LOGIC;
             H_sync   : out STD_LOGIC;
             pixel_x  : out STD_LOGIC_VECTOR(9 downto 0);
@@ -36,7 +36,7 @@ architecture testbench of VGA_tb is
         );
     end component;
 
-    signal clk      : STD_LOGIC; --100 MHz clock
+    signal clk      : STD_LOGIC; --25 MHz clock
     signal V_sync   : STD_LOGIC;
     signal H_sync   : STD_LOGIC;
     signal pixel_x  : STD_LOGIC_VECTOR(9 downto 0);
@@ -55,11 +55,11 @@ begin
 
     clk_proc : process
     begin
-        clk <= '0';
-        wait for 5 ns;  
-
         clk <= '1';
-        wait for 5 ns;
+        wait for 20 ns;  
+
+        clk <= '0';
+        wait for 20 ns;
     end process clk_proc;
 
     stim_proc : process

@@ -1,21 +1,6 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 08/21/2025 10:28:20 PM
--- Design Name: 
--- Module Name: uart_receiver_tb - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Ben Sheppard
+-- testbench for UART receiver
 ----------------------------------------------------------------------------------
 
 
@@ -47,7 +32,7 @@ signal rx  : std_logic := '1'; -- default rx to 1
 signal data : std_logic_vector(7 downto 0);
 signal data_valid : std_logic;
 
-constant CLK_PERIOD : time := 10 ns; -- 1/100,000,000
+constant CLK_PERIOD : time := 40 ns; -- 25 Mhz
 constant BAUD_PERIOD : time := 104.2 us; -- 1/9600
 begin
 
@@ -60,40 +45,88 @@ Port Map(
 
 clock: process 
 begin
-clk <= '0';
-wait for CLK_PERIOD / 2;
-clk <= '1';
-wait for CLK_PERIOD / 2;
+    clk <= '0';
+    wait for CLK_PERIOD / 2;
+    clk <= '1';
+    wait for CLK_PERIOD / 2;
 end process;
 
 stim: process
 begin
--- note since clk period and buad period dont line up, no need to shift starting
-
-wait for BAUD_PERIOD; 
--- start bit (0)
-rx <= '0';
-wait for BAUD_PERIOD;
--- first data bit
-rx <= '1';
-wait for BAUD_PERIOD;
-rx <= '0';
-wait for BAUD_PERIOD;
-rx <= '0';
-wait for BAUD_PERIOD;
-rx <= '0';
-wait for BAUD_PERIOD;
-rx <= '0';
-wait for BAUD_PERIOD;
-rx <= '0';
-wait for BAUD_PERIOD;
-rx <= '1';
-wait for BAUD_PERIOD;
-rx <= '1';
-wait for BAUD_PERIOD;
--- stop bit (1)
-rx <= '1';
-wait;
-
+    -- note since clk period and buad period dont line up, no need to shift starting
+    
+    wait for BAUD_PERIOD; 
+    -- start bit (0)
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    -- first data bit
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    -- stop bit (1)
+    rx <= '1';
+    
+    wait for BAUD_PERIOD; 
+    -- start bit (0)
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    -- first data bit
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    -- stop bit (1)
+    rx <= '1';
+    
+    wait for BAUD_PERIOD; 
+    -- start bit (0)
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    -- first data bit
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '0';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    rx <= '1';
+    wait for BAUD_PERIOD;
+    -- stop bit (1)
+    rx <= '1';
+    wait;
+    
 end process;
 end Behavioral;
