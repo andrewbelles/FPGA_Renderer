@@ -1,6 +1,7 @@
+--------------------------------------------------------------------------------------------------------------------------------------------
 -- Ben Sheppard, with help of ChatGPT for writing the test inputs to the graphics_manager
 -- Tests the graphics manager by loading two different tetrahedrons and alternating between them at a rate of 0.5 times per second
-
+-------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -25,7 +26,7 @@ architecture RTL of graphics_test_shell is
   component graphics_manager is
     Port (
       sys_clk    : in  std_logic;
-      points          : in  array_4x16_t;
+      packets          : in  array_4x16_t;
       draw_new_points : in  std_logic;
       ready_to_draw   : out std_logic;
       done_drawing    : out std_logic;
@@ -47,21 +48,21 @@ component system_clock_generation is
 end component;
 
 
-  -- Alternation period: number of 100 MHz ticks between updates.
-  -- 50,000,000 ticks ≈ 0.5 s; we toggle frames each update => ~1 Hz alternation.
+  -- Alternation period: number of 25 MHz ticks between updates.
+  -- 12,500,000 ticks ≈ 0.5 s; we toggle frames each update => ~1 Hz alternation.
   constant TICKS_PER_FRAME : natural := 12500000;
 
   -- Two frames, each with 4 vertices (X high byte, Y low byte).
   type frames_t is array(natural range <>) of array_4x16_t;
   constant FRAMES : frames_t(0 to 1) := (
     0 => (x"A948", x"5648", x"80B7", x"8080"),  -- Frame A
-    1 => (x"D3A2", x"D9A2", x"D35D", x"D95D")   -- Frame B
+    1 => (x"A3A2", x"C9A2", x"D35D", x"B95D")   -- Frame B
   );
 
-  signal points_s          : array_4x16_t := (others => (others => '0'));
-  signal new_vertices_s    : std_logic := '0';
-  signal ready_to_draw_s   : std_logic;
-  signal done_drawing_s    : std_logic;
+  signal packets_sg          : array_4x16_t := (others => (others => '0'));
+  signal new_vertices_sg    : std_logic := '0';
+  signal ready_to_draw_sg   : std_logic;
+  signal done_drawing_sg    : std_logic;
 
   signal tick_counter      : unsigned(25 downto 0) := (others => '0'); -- up to ~67M
   signal frame_idx         : std_logic := '0';
@@ -72,10 +73,10 @@ begin
   u_gm : graphics_manager
     port map (
       sys_clk    => clk, -- USING the slower 25 MHz clock.
-      points          => points_s,
-      draw_new_points => new_vertices_s,
-      ready_to_draw   => ready_to_draw_s,
-      done_drawing    => done_drawing_s,
+      packets          => packets_sg,
+      draw_new_points => new_vertices_sg,
+      ready_to_draw   => ready_to_draw_sg,
+      done_drawing    => done_drawing_sg,
       red             => red,
       green           => green,
       blue            => blue,
@@ -93,23 +94,23 @@ Port Map(input_clk_port => clk_ext_port,
   begin
     if rising_edge(clk) then
       -- Default: no pulse
-      new_vertices_s <= '0';
+      new_vertices_sg <= '0';
 
       if tick_counter = to_unsigned(TICKS_PER_FRAME-1, tick_counter'length) then
         tick_counter <= (others => '0');
 
         -- Only issue new vertices when framebuffer is ready
-        if ready_to_draw_s = '1' then
+        if ready_to_draw_sg = '1' then
           if frame_idx = '0' then
-            points_s <= FRAMES(0);
+            packets_sg <= FRAMES(0);
             frame_idx <= '1';
           else
-            points_s <= FRAMES(1);
+            packets_sg <= FRAMES(1);
             frame_idx <= '0';
           end if;
 
           -- One-cycle strobe to load new vertices
-          new_vertices_s <= '1';  -- pulses for exactly this clk
+          new_vertices_sg <= '1';  -- pulses for exactly this clk
         end if;
 
       else

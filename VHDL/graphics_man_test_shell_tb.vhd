@@ -1,21 +1,7 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 08/25/2025 11:41:38 AM
--- Design Name: 
--- Module Name: graphics_man_test_shell_tb - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Ben Sheppard
+-- Testbench for the graphics manager test shell module. Only need to provide a clock
+-- input because the shell itself has a process that does the stimulus for vertices.
 ----------------------------------------------------------------------------------
 
 
@@ -35,7 +21,7 @@ entity graphics_man_test_shell_tb is
 --  Port ( );
 end graphics_man_test_shell_tb;
 
-architecture Behavioral of graphics_man_test_shell_tb is
+ architecture Behavioral of graphics_man_test_shell_tb is
 component graphics_test_shell is
   Port (
     clk_ext_port : in  std_logic;  -- 100 MHz FPGA clock
